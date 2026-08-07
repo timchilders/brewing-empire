@@ -1,0 +1,46 @@
+# ---- .NET ----
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+.vs/
+artifacts/
+*.trx
+TestResults/
+project.lock.json
+project.assets.json
+*.nuget.props
+*.nuget.targets
+
+# ---- Unity ----
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]serSettings/
+[Mm]emoryCaptures/
+Assets/AssetStoreTools*
+*.csproj.user
+*.unityproj
+*.sln.docstates
+sysinfo.txt
+*.apk
+*.aab
+*.unitypackage
+crashlytics-build.properties
+
+# ---- Rider / VS Code ----
+.idea/
+.vscode/
+*.DotSettings.user
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Local tooling ----
+tmp/

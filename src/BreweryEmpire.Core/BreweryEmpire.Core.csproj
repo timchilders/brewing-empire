@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <RootNamespace>BreweryEmpire.Core</RootNamespace>
+    <AssemblyName>BreweryEmpire.Core</AssemblyName>
+  </PropertyGroup>
+
+  <!--
+    Unity independence: this assembly must never reference UnityEngine.
+    All simulation logic is pure C# so it can run headless in tests and CI.
+    A guard test in BreweryEmpire.Core.Tests enforces this.
+  -->
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+</Project>
