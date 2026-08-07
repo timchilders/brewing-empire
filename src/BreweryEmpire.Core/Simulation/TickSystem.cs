@@ -19,9 +19,11 @@ namespace BreweryEmpire.Core.Simulation
         public static void AdvanceDay(GameState state)
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
-            if (state.IsBankrupt) return;
 
-            // 1. Calendar first: every later system reads the new date.
+            // The clock always advances by exactly one day. Bankruptcy is a
+            // terminal *flag* the UI checks to stop ticking; it must never
+            // freeze the calendar, or replays and the "one tick = one day"
+            // invariant both break.
             state.Date = state.Date.AddDays(1);
 
             // 2. Vessels tick, freeing any whose occupancy expired.
@@ -51,7 +53,9 @@ namespace BreweryEmpire.Core.Simulation
             EconomySystem.ProcessDailyUpkeep(state);
             EconomySystem.ProcessPayrollIfDue(state);
 
-            // 7. Housekeeping.
+            // 7. Housekeeping. Bankruptcy is detected here, not used to skip
+            //    the systems above — a ruined brewery still pays its staff and
+            //    they still walk out.
             EconomySystem.CheckBankruptcy(state);
             state.Ledger.CompactHistory(state.Date);
             state.SyncRandomState();
