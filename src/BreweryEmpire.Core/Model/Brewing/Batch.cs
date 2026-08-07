@@ -91,6 +91,13 @@ namespace BreweryEmpire.Core.Model.Brewing
                 State = BatchState.Spoiled;
         }
 
+        /// <summary>Re-attach an infection during load without re-applying its penalty.</summary>
+        public void RestoreInfection(Infection infection)
+        {
+            if (infection == null) throw new ArgumentNullException(nameof(infection));
+            _infections.Add(infection);
+        }
+
         /// <summary>Transition to sellable. Spoiled beer can never become ready.</summary>
         public void MarkReady()
         {

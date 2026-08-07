@@ -6,6 +6,10 @@
 // This type is intentionally internal so it cannot collide with the real one when this
 // assembly is consumed by a modern runtime.
 
+// Balance-critical helpers (infection risk curves, quality/price maths) are internal so
+// they are not public API, but the test assembly must be able to assert on them directly.
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("BreweryEmpire.Core.Tests")]
+
 namespace System.Runtime.CompilerServices
 {
     internal static class IsExternalInit
