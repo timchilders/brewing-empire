@@ -158,6 +158,10 @@ namespace BreweryEmpire.Core.Model.Recipes
         /// <summary>Target original gravity in gravity points (50 = 1.050).</summary>
         public int TargetOriginalGravityPoints { get; set; } = 50;
 
+        /// <summary>Broad style category, drives demand and sour-intent.</summary>
+        public BreweryEmpire.Core.Model.Brewing.BeerStyle Style { get; set; } =
+            BreweryEmpire.Core.Model.Brewing.BeerStyle.PaleAle;
+
         public IReadOnlyList<GristItem> Grist => _grist;
         public IReadOnlyList<HopAddition> Hops => _hops;
 

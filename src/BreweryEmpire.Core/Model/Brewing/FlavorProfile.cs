@@ -66,5 +66,14 @@ namespace BreweryEmpire.Core.Model.Brewing
         public OffFlavor Character { get; init; }
         public int SeverityBasisPoints { get; init; }
         public string Cause { get; init; } = string.Empty;
+
+        /// <summary>The organism responsible, when known. Drives the defence model.</summary>
+        public SpoilageOrganism Organism { get; init; }
+
+        /// <summary>Progress toward total ruin, basis points. 10000 = spoiled.</summary>
+        public int ProgressionBasisPoints { get; set; }
+
+        /// <summary>True when the organism is wanted (a deliberate sour).</summary>
+        public bool IsIntentionalSour { get; init; }
     }
 }

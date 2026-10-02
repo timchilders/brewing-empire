@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BreweryEmpire.Core.Economy;
 using BreweryEmpire.Core.State;
 
@@ -38,6 +39,12 @@ namespace BreweryEmpire.Core.Model.Brewing
 
         /// <summary>Repitch count; higher generations drift and attenuate less.</summary>
         public int YeastGeneration { get; set; } = 1;
+
+        /// <summary>The style this batch was brewed as (sour-intent lives here).</summary>
+        public BeerStyle Style { get; set; } = BeerStyle.PaleAle;
+
+        /// <summary>Whether the batch has been pasteurized (near-immunity to spoilage).</summary>
+        public bool IsPasteurized { get; set; }
 
         public int VolumeLitres { get; private set; }
         public BatchState State { get; private set; } = BatchState.Fermenting;
@@ -121,6 +128,63 @@ namespace BreweryEmpire.Core.Model.Brewing
             if (infection == null) throw new ArgumentNullException(nameof(infection));
             _infections.Add(infection);
         }
+
+        /// <summary>
+        /// Contract an infection from a known organism. Starts progression at zero;
+        /// the spoilage system advances it toward ruin. A wanted (sour) organism on
+        /// a sour style is not a defect and never spoils the batch.
+        /// </summary>
+        public void ContractInfection(SpoilageOrganism organism, string cause)
+        {
+            bool intentional = SpoilageModel.IsIntentionalSour(Style, organism);
+
+            _infections.Add(new Infection
+            {
+                Character = OffFlavor.Sour,
+                SeverityBasisPoints = 0,
+                Organism = organism,
+                ProgressionBasisPoints = 0,
+                Cause = cause,
+                IsIntentionalSour = intentional
+            });
+
+            if (!intentional)
+            {
+                // A detectable infection already drags quality.
+                AdjustQuality(-400);
+            }
+        }
+
+        /// <summary>
+        /// Advance the latest non-sour infection toward ruin. Returns true exactly
+        /// when the batch crosses the spoilage threshold (so the caller can write
+        /// off the cost once).
+        /// </summary>
+        public bool AdvanceInfection(int progressionDelta)
+        {
+            if (progressionDelta < 0) throw new ArgumentOutOfRangeException(nameof(progressionDelta));
+
+            var active = _infections
+                .Where(i => !i.IsIntentionalSour && i.ProgressionBasisPoints < 10000)
+                .OrderByDescending(i => i.ProgressionBasisPoints)
+                .FirstOrDefault();
+
+            if (active == null) return false;
+
+            active.ProgressionBasisPoints += progressionDelta;
+
+            if (active.ProgressionBasisPoints >= 10000)
+            {
+                active.ProgressionBasisPoints = 10000;
+                State = BatchState.Spoiled;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>True if this batch carries a deliberate, wanted sour infection.</summary>
+        public bool HasIntentionalSour => _infections.Any(i => i.IsIntentionalSour);
 
         /// <summary>Transition to sellable. Spoiled beer can never become ready.</summary>
         public void MarkReady()

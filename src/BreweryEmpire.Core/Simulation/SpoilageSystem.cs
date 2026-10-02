@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using BreweryEmpire.Core.Economy;
 using BreweryEmpire.Core.Model.Brewing;
@@ -10,12 +9,15 @@ using BreweryEmpire.Core.State;
 namespace BreweryEmpire.Core.Simulation
 {
     /// <summary>
-    /// Infection and spoilage.
+    /// Infection and spoilage — the two-stage model.
     ///
-    /// THE CENTRAL HISTORICAL TENSION: before germ theory, brewers lost beer
-    /// constantly and could not explain why. Risk here is driven by vessel
-    /// hygiene and ambient temperature, so the pre-refrigeration summer is
-    /// genuinely dangerous and hiring Hansen or Pasteur visibly fixes it.
+    /// Stage 1 is an infection ROLL at vulnerable moments (open fermentation,
+    /// warm transit, high-oxygen packaging), driven by vessel hygiene, tier,
+    /// brewmaster resistance and pasteurization. Stage 2 is PROGRESSION each
+    /// tick, driven by temperature, ABV, IBU and the cold chain. The defenses
+    /// are all historically real and already modelled: hops inhibit Gram-positive
+    /// bacteria, alcohol resists everything, cold slows, pasteurization nearly
+    /// immunises.
     /// </summary>
     public static class SpoilageSystem
     {
@@ -59,45 +61,127 @@ namespace BreweryEmpire.Core.Simulation
             return Math.Max(0, risk);
         }
 
-        private static readonly OffFlavor[] InfectionCharacters =
+        /// <summary>
+        /// Base progression rate once infected, basis points per day. This is
+        /// deliberately far faster than the daily *risk* curve: a contracted
+        /// infection ruins beer in days, not weeks — which is why contaminated
+        /// summer batches could not be saved.
+        /// </summary>
+        internal static int BaseProgressionRateBasisPoints(int ambientTempCelsius)
         {
-            OffFlavor.Sour, OffFlavor.Phenolic, OffFlavor.Diacetyl, OffFlavor.Acetaldehyde
-        };
+            if (ambientTempCelsius <= 5) return 400;
+            if (ambientTempCelsius <= 12) return 1000;
+            if (ambientTempCelsius <= 18) return 2500;
+            if (ambientTempCelsius <= 24) return 5000;
+            return 8000;
+        }
 
-        /// <summary>Roll infection for every fermenting batch at a node.</summary>
+        /// <summary>
+        /// Defence (basis points) a batch mounts against an organism.
+        /// Hops inhibit Gram-positive bacteria (Lacto/Pedio); alcohol resists
+        /// everything. Defence caps at 7000bp so spoilage never becomes
+        /// mathematically impossible outside pasteurization.
+        /// </summary>
+        public static int DefenseBasisPoints(SpoilageOrganism organism, int ibuTenths, int abvBasisPoints)
+        {
+            int ibuDefense = 0;
+            if (organism == SpoilageOrganism.Lactobacillus || organism == SpoilageOrganism.Pediococcus)
+                ibuDefense = Math.Min(4000, ibuTenths * 8);
+
+            int abvDefense = Math.Min(3000, Math.Max(0, abvBasisPoints - 300) * 6);
+
+            return Math.Min(7000, ibuDefense + abvDefense);
+        }
+
+        /// <summary>
+        /// Daily progression (basis points) of an infection, after the batch's
+        /// defenses and the environment. Pasteurized beer progresses at a token
+        /// 2% rate; cold storage cuts ambient rate by 60%.
+        /// </summary>
+        public static int ProgressionRateBasisPoints(
+            SpoilageOrganism organism, int ambientC, int ibuTenths,
+            int abvBasisPoints, bool cold, bool pasteurized)
+        {
+            if (pasteurized) return 20;   // near-immunity, but never absolute
+
+            int baseRate = BaseProgressionRateBasisPoints(ambientC);
+            int defense = DefenseBasisPoints(organism, ibuTenths, abvBasisPoints);
+
+            int rate = baseRate * Math.Max(0, 10000 - defense) / 10000;
+
+            if (cold) rate = rate * 4000 / 10000;
+
+            return Math.Max(0, rate);
+        }
+
+        /// <summary>Whether a sour organism on this style is the point, not a defect.</summary>
+        public static bool IsIntentionalSour(BeerStyle style, SpoilageOrganism organism) =>
+            SpoilageModel.IsIntentionalSour(style, organism);
+
+        /// <summary>Advance spoilage for every batch at a node.</summary>
         public static void ProcessNode(GameState state, BreweryNode node)
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
             if (node == null) throw new ArgumentNullException(nameof(node));
+
+            int ambient = node.Climate.AmbientTempOn(state.Date);
+            bool cold = node.HasColdStorage;
 
             foreach (var batch in node.Batches.ToList())
             {
                 if (batch.State == BatchState.Spoiled) continue;
 
                 var vessel = node.Vessels.FirstOrDefault(v => v.Id == batch.VesselId);
-                int risk = InfectionRiskFor(state, node, vessel);
+                bool hasActiveInfection = batch.Infections.Any(i =>
+                    !i.IsIntentionalSour && i.ProgressionBasisPoints < 10000);
 
-                if (!state.Random.Chance(risk)) continue;
-
-                var character = InfectionCharacters[state.Random.NextInt(0, InfectionCharacters.Length)];
-                int severity = state.Random.NextInt(500, 7000);
-
-                batch.AddInfection(new Infection
+                if (!hasActiveInfection)
                 {
-                    Character = character,
-                    SeverityBasisPoints = severity,
-                    Cause = "Ambient " + node.Climate.AmbientTempOn(state.Date) + "C, hygiene " +
-                            (vessel?.EffectiveHygieneBasisPoints ?? node.AverageHygieneBasisPoints) + "bp"
-                });
-
-                if (batch.State == BatchState.Spoiled)
+                    // Stage 1: contract?
+                    int risk = InfectionRiskFor(state, node, vessel);
+                    if (risk > 0 && state.Random.Chance(risk))
+                    {
+                        var organism = (SpoilageOrganism)state.Random.NextInt(0, 5);
+                        batch.ContractInfection(organism,
+                            "Ambient " + ambient + "C, hygiene " +
+                            (vessel?.EffectiveHygieneBasisPoints ?? node.AverageHygieneBasisPoints) + "bp");
+                    }
+                }
+                else
                 {
-                    state.Ledger.ForceDebit(state.Date, LedgerCategory.SpoilageWriteOff,
-                                            batch.CostOfGoods,
-                                            "Batch " + batch.Id + " spoiled (" + character + ")",
-                                            node.Id.Value);
+                    // Stage 2: progress toward ruin.
+                    int rate = ProgressionRateBasisPoints(
+                        ActiveOrganism(batch), ambient, batch.IbuTenths,
+                        batch.AbvBasisPoints, cold, batch.IsPasteurized);
+
+                    if (batch.AdvanceInfection(rate))
+                        WriteOff(state, node, batch);
                 }
             }
+        }
+
+        private static SpoilageOrganism ActiveOrganism(Batch batch) =>
+            batch.Infections
+                .Where(i => !i.IsIntentionalSour && i.ProgressionBasisPoints < 10000)
+                .OrderByDescending(i => i.ProgressionBasisPoints)
+                .Select(i => i.Organism)
+                .FirstOrDefault();
+
+        /// <summary>Write a spoiled batch's COGS off to the ledger once.</summary>
+        public static void WriteOff(GameState state, BreweryNode node, Batch batch)
+        {
+            if (state == null) throw new ArgumentNullException(nameof(state));
+            if (node == null) throw new ArgumentNullException(nameof(node));
+            if (batch == null) throw new ArgumentNullException(nameof(batch));
+
+            var organism = batch.Infections
+                .OrderByDescending(i => i.ProgressionBasisPoints)
+                .FirstOrDefault()?.Organism ?? SpoilageOrganism.Lactobacillus;
+
+            state.Ledger.ForceDebit(state.Date, LedgerCategory.SpoilageWriteOff,
+                                    batch.CostOfGoods,
+                                    "Batch " + batch.Id + " spoiled (" + organism + ")",
+                                    node.Id.Value);
         }
     }
 }
