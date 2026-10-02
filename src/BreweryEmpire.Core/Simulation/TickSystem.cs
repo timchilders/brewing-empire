@@ -30,11 +30,14 @@ namespace BreweryEmpire.Core.Simulation
             foreach (var node in state.World.Nodes)
                 FermentationSystem.ProcessNode(state, node);
 
-            // 3. Infection rolls against today's temperature.
+            // 3. Logistics: shipments advance and deliver.
+            LogisticsSystem.ProcessShipments(state);
+
+            // 4. Infection rolls against today's temperature.
             foreach (var node in state.World.Nodes)
                 SpoilageSystem.ProcessNode(state, node);
 
-            // 4. Sell finished beer at markets.
+            // 5. Sell finished beer at markets.
             MarketSystem.ProcessMarkets(state);
 
             // 6. Fixed costs, then wages on the first of the month.

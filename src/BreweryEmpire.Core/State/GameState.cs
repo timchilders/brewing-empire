@@ -36,6 +36,10 @@ namespace BreweryEmpire.Core.State
         public List<BreweryEmpire.Core.Model.Markets.MarketNode> Markets { get; set; } =
             new List<BreweryEmpire.Core.Model.Markets.MarketNode>();
 
+        /// <summary>Shipments in transit between nodes.</summary>
+        public List<BreweryEmpire.Core.Model.Logistics.Shipment> Shipments { get; set; } =
+            new List<BreweryEmpire.Core.Model.Logistics.Shipment>();
+
         /// <summary>Reputation drives price realisation; starts neutral.</summary>
         public int ReputationBasisPoints { get; set; } = 5000;
 
