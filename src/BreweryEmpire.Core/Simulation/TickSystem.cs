@@ -34,9 +34,8 @@ namespace BreweryEmpire.Core.Simulation
             foreach (var node in state.World.Nodes)
                 SpoilageSystem.ProcessNode(state, node);
 
-            // 4. Sell finished beer.
-            foreach (var node in state.World.Nodes)
-                SalesSystem.ProcessNode(state, node);
+            // 4. Sell finished beer at markets.
+            MarketSystem.ProcessMarkets(state);
 
             // 6. Fixed costs, then wages on the first of the month.
             EconomySystem.ProcessDailyUpkeep(state);

@@ -222,7 +222,8 @@ namespace BreweryEmpire.Core.Tests.Simulation
             // Statistical assertion: with the calibrated risk curve a summer
             // batch in an open wooden fermenter spoils roughly 10-15% of the
             // time, so across 100 runs seeing zero is vanishingly unlikely.
-            // Deliberately sized so this cannot fail on ordinary bad luck.
+            // Spoiled batches are removed by the market on the tick they spoil,
+            // so we detect spoilage via the ledger write-off, not the batch list.
             const int runs = 100;
             int spoiled = 0;
 
@@ -232,10 +233,9 @@ namespace BreweryEmpire.Core.Tests.Simulation
                 trial.Date = GameDate.FromYearMonthDay(1750, 7, 1);
                 BrewingSystem.TryStartBrew(trial, new NodeId("burton"), new RecipeId("pale-ale"));
 
-                TickSystem.AdvanceDays(trial, 21);
+                TickSystem.AdvanceDays(trial, 26);
 
-                var node = trial.World.Get(new NodeId("burton"));
-                if (node.Batches.Any(b => b.State == BatchState.Spoiled)) spoiled++;
+                if (trial.Ledger.Entries.Any(e => e.Category == LedgerCategory.SpoilageWriteOff)) spoiled++;
             }
 
             spoiled.Should().BeGreaterThan(0,
@@ -255,10 +255,9 @@ namespace BreweryEmpire.Core.Tests.Simulation
                     var trial = TestScenario.Standard(seed: 8000 + run);
                     trial.Date = GameDate.FromYearMonthDay(1750, month, 1);
                     BrewingSystem.TryStartBrew(trial, new NodeId("burton"), new RecipeId("pale-ale"));
-                    TickSystem.AdvanceDays(trial, 21);
+                    TickSystem.AdvanceDays(trial, 26);
 
-                    var node = trial.World.Get(new NodeId("burton"));
-                    if (node.Batches.Any(b => b.State == BatchState.Spoiled)) spoiled++;
+                    if (trial.Ledger.Entries.Any(e => e.Category == LedgerCategory.SpoilageWriteOff)) spoiled++;
                 }
 
                 return spoiled;

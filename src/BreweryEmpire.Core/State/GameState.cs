@@ -32,6 +32,10 @@ namespace BreweryEmpire.Core.State
         public Dictionary<string, Recipe> Recipes { get; set; } =
             new Dictionary<string, Recipe>(StringComparer.Ordinal);
 
+        /// <summary>Markets where beer is sold. Owned and neutral alike.</summary>
+        public List<BreweryEmpire.Core.Model.Markets.MarketNode> Markets { get; set; } =
+            new List<BreweryEmpire.Core.Model.Markets.MarketNode>();
+
         /// <summary>Reputation drives price realisation; starts neutral.</summary>
         public int ReputationBasisPoints { get; set; } = 5000;
 

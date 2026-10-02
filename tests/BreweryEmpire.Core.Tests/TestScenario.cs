@@ -39,6 +39,13 @@ namespace BreweryEmpire.Core.Tests
 
             state.World.AddNode(node);
 
+            // A local market with real pale-ale demand, so brewing actually sells.
+            var market = BreweryEmpire.Core.Model.Markets.MarketNode.Create(
+                "burton-market", "Burton", new NodeId("burton"), RegionClimate.BurtonEngland,
+                population: 10_000);
+            market.SetBaseDemand(BreweryEmpire.Core.Model.Brewing.BeerStyle.PaleAle, 200);
+            state.Markets.Add(market);
+
             var brewmaster = new StaffMember(new StaffId("bm-1"), "Sam Allsopp",
                                              StaffRole.Brewmaster, 6000,
                                              Money.FromWhole(25), 42, start);

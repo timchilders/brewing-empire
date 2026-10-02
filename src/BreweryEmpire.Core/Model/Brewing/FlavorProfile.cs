@@ -45,6 +45,9 @@ namespace BreweryEmpire.Core.Model.Brewing
             if (score > 10000) return 10000;
             return (int)score;
         }
+
+        /// <summary>How well this flavour satisfies a market's preference (same as MatchScore).</summary>
+        public int MarketFitBasisPoints(FlavorProfile target) => MatchScoreBasisPoints(target);
     }
 
     /// <summary>A defect present in a finished beer.</summary>

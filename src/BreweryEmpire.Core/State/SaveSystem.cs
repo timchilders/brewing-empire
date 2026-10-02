@@ -89,6 +89,7 @@ namespace BreweryEmpire.Core.State
                     Type = (int)n.Type,
                     RegionId = n.RegionId.Value,
                     DailyOverheadCents = n.DailyOverhead.Cents,
+                    HasColdStorage = n.HasColdStorage,
                     Water = n.Water,
                     ClimateRegionId = n.Climate.RegionId,
                     ClimateTemps = n.Climate.MonthlyAvgTempCelsius
@@ -126,6 +127,16 @@ namespace BreweryEmpire.Core.State
                         QualityBasisPoints = b.QualityBasisPoints,
                         CostOfGoodsCents = b.CostOfGoods.Cents,
                         Flavor = b.Flavor,
+                        OriginalGravityPoints = b.OriginalGravityPoints,
+                        FinalGravityPoints = b.FinalGravityPoints,
+                        AttenuationBasisPoints = b.AttenuationBasisPoints,
+                        AbvBasisPoints = b.AbvBasisPoints,
+                        IbuTenths = b.IbuTenths,
+                        SrmLovibond = b.SrmLovibond,
+                        YeastIngredientId = b.YeastIngredientId,
+                        YeastGeneration = b.YeastGeneration,
+                        Style = (int)b.Style,
+                        IsPasteurized = b.IsPasteurized,
                         Infections = new List<Infection>(b.Infections)
                     });
                 }
@@ -176,11 +187,36 @@ namespace BreweryEmpire.Core.State
                     TargetVolumeLitres = r.TargetVolumeLitres,
                     FermentationDays = r.FermentationDays,
                     ConditioningDays = r.ConditioningDays,
+                    TargetOriginalGravityPoints = r.TargetOriginalGravityPoints,
+                    Style = (int)r.Style,
                     Grist = new List<GristItem>(r.Grist),
                     Hops = new List<HopAddition>(r.Hops),
                     MashSteps = new List<MashStep>(r.Mash.Steps)
                 };
                 dto.Recipes.Add(recipeDto);
+            }
+
+            foreach (var m in s.Markets)
+            {
+                var marketDto = new MarketDto
+                {
+                    Id = m.Id,
+                    Name = m.Name,
+                    AdjacentNodeId = m.AdjacentNodeId,
+                    ClimateRegionId = m.Climate.RegionId,
+                    ClimateTemps = m.Climate.MonthlyAvgTempCelsius,
+                    Population = m.Population,
+                    ReputationBasisPoints = m.ReputationBasisPoints,
+                    BasePricePerLitreCents = m.BasePricePerLitre.Cents,
+                    PreferredProfile = m.PreferredProfile,
+                    IsTiedHouse = m.IsTiedHouse,
+                    OwnerBreweryId = m.OwnerBreweryId
+                };
+
+                foreach (var kv in m.BaseDemandEntries())
+                    marketDto.BaseDemand.Add((int)kv.Key, kv.Value);
+
+                dto.Markets.Add(marketDto);
             }
 
             return dto;
@@ -225,7 +261,8 @@ namespace BreweryEmpire.Core.State
                                            new RegionId(n.RegionId),
                                            n.Water ?? WaterProfile.London, climate)
                 {
-                    DailyOverhead = Money.FromCents(n.DailyOverheadCents)
+                    DailyOverhead = Money.FromCents(n.DailyOverheadCents),
+                    HasColdStorage = n.HasColdStorage
                 };
 
                 foreach (var v in n.Vessels)
@@ -252,7 +289,17 @@ namespace BreweryEmpire.Core.State
                                           GameDate.FromTotalDays(b.ReadyOnTotalDays))
                     {
                         CostOfGoods = Money.FromCents(b.CostOfGoodsCents),
-                        Flavor = b.Flavor ?? new FlavorProfile()
+                        Flavor = b.Flavor ?? new FlavorProfile(),
+                        OriginalGravityPoints = b.OriginalGravityPoints,
+                        FinalGravityPoints = b.FinalGravityPoints,
+                        AttenuationBasisPoints = b.AttenuationBasisPoints,
+                        AbvBasisPoints = b.AbvBasisPoints,
+                        IbuTenths = b.IbuTenths,
+                        SrmLovibond = b.SrmLovibond,
+                        YeastIngredientId = string.IsNullOrEmpty(b.YeastIngredientId) ? "ale-yeast" : b.YeastIngredientId,
+                        YeastGeneration = Math.Max(1, b.YeastGeneration),
+                        Style = (BeerStyle)b.Style,
+                        IsPasteurized = b.IsPasteurized
                     };
 
                     batch.SetQuality(b.QualityBasisPoints);
@@ -307,7 +354,9 @@ namespace BreweryEmpire.Core.State
                     YeastIngredientId = r.YeastIngredientId,
                     TargetVolumeLitres = r.TargetVolumeLitres,
                     FermentationDays = r.FermentationDays,
-                    ConditioningDays = r.ConditioningDays
+                    ConditioningDays = r.ConditioningDays,
+                    TargetOriginalGravityPoints = r.TargetOriginalGravityPoints > 0 ? r.TargetOriginalGravityPoints : 50,
+                    Style = (BeerStyle)r.Style
                 };
 
                 foreach (var g in r.Grist ?? new List<GristItem>())
@@ -322,6 +371,35 @@ namespace BreweryEmpire.Core.State
                 if (mash.Steps.Count > 0) recipe.Mash = mash;
 
                 state.Recipes[recipe.Id.Value] = recipe;
+            }
+
+            foreach (var m in dto.Markets)
+            {
+                var climate = new RegionClimate
+                {
+                    RegionId = m.ClimateRegionId,
+                    MonthlyAvgTempCelsius = m.ClimateTemps ?? new int[12]
+                };
+
+                var market = new BreweryEmpire.Core.Model.Markets.MarketNode
+                {
+                    Id = m.Id,
+                    Name = m.Name,
+                    AdjacentNodeId = m.AdjacentNodeId,
+                    Climate = climate,
+                    Population = m.Population,
+                    BasePricePerLitre = Money.FromCents(m.BasePricePerLitreCents),
+                    PreferredProfile = m.PreferredProfile ?? new FlavorProfile(),
+                    IsTiedHouse = m.IsTiedHouse,
+                    OwnerBreweryId = m.OwnerBreweryId
+                };
+
+                market.AdjustReputation(m.ReputationBasisPoints - 5000);
+
+                foreach (var kv in m.BaseDemand)
+                    market.SetBaseDemand((BeerStyle)kv.Key, kv.Value);
+
+                state.Markets.Add(market);
             }
 
             return state;
@@ -366,6 +444,7 @@ namespace BreweryEmpire.Core.State
             public List<NodeDto> Nodes { get; set; } = new List<NodeDto>();
             public List<StaffDto> Staff { get; set; } = new List<StaffDto>();
             public List<RecipeDto> Recipes { get; set; } = new List<RecipeDto>();
+            public List<MarketDto> Markets { get; set; } = new List<MarketDto>();
             public List<RivalBrewer>? Rivals { get; set; }
         }
 
@@ -385,6 +464,7 @@ namespace BreweryEmpire.Core.State
             public int Type { get; set; }
             public string RegionId { get; set; } = string.Empty;
             public long DailyOverheadCents { get; set; }
+            public bool HasColdStorage { get; set; }
             public WaterProfile? Water { get; set; }
             public string ClimateRegionId { get; set; } = string.Empty;
             public int[]? ClimateTemps { get; set; }
@@ -420,6 +500,16 @@ namespace BreweryEmpire.Core.State
             public int QualityBasisPoints { get; set; }
             public long CostOfGoodsCents { get; set; }
             public FlavorProfile? Flavor { get; set; }
+            public int OriginalGravityPoints { get; set; }
+            public int FinalGravityPoints { get; set; }
+            public int AttenuationBasisPoints { get; set; }
+            public int AbvBasisPoints { get; set; }
+            public int IbuTenths { get; set; }
+            public int SrmLovibond { get; set; }
+            public string YeastIngredientId { get; set; } = string.Empty;
+            public int YeastGeneration { get; set; }
+            public int Style { get; set; }
+            public bool IsPasteurized { get; set; }
             public List<Infection>? Infections { get; set; }
         }
 
@@ -457,9 +547,27 @@ namespace BreweryEmpire.Core.State
             public int TargetVolumeLitres { get; set; }
             public int FermentationDays { get; set; }
             public int ConditioningDays { get; set; }
+            public int TargetOriginalGravityPoints { get; set; }
+            public int Style { get; set; }
             public List<GristItem>? Grist { get; set; }
             public List<HopAddition>? Hops { get; set; }
             public List<MashStep>? MashSteps { get; set; }
+        }
+
+        internal sealed class MarketDto
+        {
+            public string Id { get; set; } = string.Empty;
+            public string Name { get; set; } = string.Empty;
+            public string AdjacentNodeId { get; set; } = string.Empty;
+            public string ClimateRegionId { get; set; } = string.Empty;
+            public int[]? ClimateTemps { get; set; }
+            public int Population { get; set; }
+            public int ReputationBasisPoints { get; set; }
+            public long BasePricePerLitreCents { get; set; }
+            public FlavorProfile? PreferredProfile { get; set; }
+            public bool IsTiedHouse { get; set; }
+            public string? OwnerBreweryId { get; set; }
+            public Dictionary<int, int> BaseDemand { get; set; } = new Dictionary<int, int>();
         }
     }
 }
