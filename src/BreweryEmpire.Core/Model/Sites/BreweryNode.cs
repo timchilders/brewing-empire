@@ -5,6 +5,7 @@ using BreweryEmpire.Core.Economy;
 using BreweryEmpire.Core.Model.Brewing;
 using BreweryEmpire.Core.Model.Ingredients;
 using BreweryEmpire.Core.Model.Packaging;
+using BreweryEmpire.Core.State;
 
 namespace BreweryEmpire.Core.Model.Sites
 {
@@ -41,10 +42,43 @@ namespace BreweryEmpire.Core.Model.Sites
         public Money DailyOverhead { get; set; }
 
         /// <summary>
-        /// Whether this site can ferment cold (ice house / refrigerated warehouse).
-        /// Negates the ambient temperature penalty in FermentationSystem.
+        /// Whether this site can ferment cold. Refrigeration is always cold; an
+        /// ice house is only cold while it still holds ice.
         /// </summary>
-        public bool HasColdStorage { get; set; }
+        public bool IsRefrigerated { get; set; }
+        public bool HasIceHouse { get; set; }
+        public int IceStockTonnes { get; private set; }
+
+        public bool HasColdStorage => IsRefrigerated || (HasIceHouse && IceStockTonnes > 0);
+
+        /// <summary>
+        /// Harvest ice into the ice house. Only works in a freezing month in a
+        /// climate that freezes; returns tonnes added.
+        /// </summary>
+        public int HarvestIce(GameDate date)
+        {
+            if (!HasIceHouse) return 0;
+            if (!Climate.SupportsWinterIceHarvest) return 0;
+            if (Climate.AmbientTempOn(date) > 0) return 0;
+
+            int added = 10;
+            IceStockTonnes += added;
+            return added;
+        }
+
+        /// <summary>Draw down the ice stock as cold storage runs.</summary>
+        public void ConsumeIce(int tonnes)
+        {
+            if (tonnes < 0) throw new ArgumentOutOfRangeException(nameof(tonnes));
+            IceStockTonnes = Math.Max(0, IceStockTonnes - tonnes);
+        }
+
+        /// <summary>Set the ice stock directly, for save loading.</summary>
+        public void RestoreIceStock(int tonnes)
+        {
+            if (tonnes < 0) throw new ArgumentOutOfRangeException(nameof(tonnes));
+            IceStockTonnes = tonnes;
+        }
 
         public IReadOnlyList<Vessel> Vessels => _vessels;
         public IReadOnlyList<Batch> Batches => _batches;

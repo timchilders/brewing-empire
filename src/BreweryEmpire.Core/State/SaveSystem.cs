@@ -89,7 +89,9 @@ namespace BreweryEmpire.Core.State
                     Type = (int)n.Type,
                     RegionId = n.RegionId.Value,
                     DailyOverheadCents = n.DailyOverhead.Cents,
-                    HasColdStorage = n.HasColdStorage,
+                    IsRefrigerated = n.IsRefrigerated,
+                    HasIceHouse = n.HasIceHouse,
+                    IceStockTonnes = n.IceStockTonnes,
                     Water = n.Water,
                     ClimateRegionId = n.Climate.RegionId,
                     ClimateTemps = n.Climate.MonthlyAvgTempCelsius
@@ -262,8 +264,11 @@ namespace BreweryEmpire.Core.State
                                            n.Water ?? WaterProfile.London, climate)
                 {
                     DailyOverhead = Money.FromCents(n.DailyOverheadCents),
-                    HasColdStorage = n.HasColdStorage
+                    IsRefrigerated = n.IsRefrigerated,
+                    HasIceHouse = n.HasIceHouse
                 };
+
+                node.RestoreIceStock(n.IceStockTonnes);
 
                 foreach (var v in n.Vessels)
                 {
@@ -464,7 +469,9 @@ namespace BreweryEmpire.Core.State
             public int Type { get; set; }
             public string RegionId { get; set; } = string.Empty;
             public long DailyOverheadCents { get; set; }
-            public bool HasColdStorage { get; set; }
+            public bool IsRefrigerated { get; set; }
+            public bool HasIceHouse { get; set; }
+            public int IceStockTonnes { get; set; }
             public WaterProfile? Water { get; set; }
             public string ClimateRegionId { get; set; } = string.Empty;
             public int[]? ClimateTemps { get; set; }
