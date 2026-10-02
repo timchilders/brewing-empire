@@ -92,6 +92,18 @@ namespace BreweryEmpire.Core.Simulation
 
             batch.SetQuality(ComputeQuality(state, recipe, node, vessel));
 
+            // Gravity from mash chemistry. Water fit is neutral for now (the
+            // recipe carries no target water yet) — Block C wires style water.
+            var maltsterBonus = state.Staff.AggregateBonus(node.Id.Value, TraitEffect.MashEfficiency);
+            var (og, fg, attenuation, abv) = MashChemistry.ComputeGravity(
+                recipe, state.Catalog, vessel.Tier, vessel.ConditionBasisPoints,
+                waterFitBasisPoints: 10000, maltsterBonusBasisPoints: maltsterBonus);
+
+            batch.OriginalGravityPoints = og;
+            batch.FinalGravityPoints = fg;
+            batch.AttenuationBasisPoints = attenuation;
+            batch.AbvBasisPoints = abv;
+
             vessel.Occupy(batchId, recipe.TotalDaysToReady);
             node.AddBatch(batch);
 

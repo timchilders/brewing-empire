@@ -155,6 +155,9 @@ namespace BreweryEmpire.Core.Model.Recipes
         public int ConditioningDays { get; set; } = 14;
         public MashSchedule Mash { get; set; } = MashSchedule.SingleInfusion(66);
 
+        /// <summary>Target original gravity in gravity points (50 = 1.050).</summary>
+        public int TargetOriginalGravityPoints { get; set; } = 50;
+
         public IReadOnlyList<GristItem> Grist => _grist;
         public IReadOnlyList<HopAddition> Hops => _hops;
 

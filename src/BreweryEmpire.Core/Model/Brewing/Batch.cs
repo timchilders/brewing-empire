@@ -38,6 +38,18 @@ namespace BreweryEmpire.Core.Model.Brewing
         public GameDate BrewedOn { get; set; }
         public GameDate ReadyOn { get; set; }
 
+        /// <summary>Original gravity in gravity points (50 = 1.050).</summary>
+        public int OriginalGravityPoints { get; set; }
+
+        /// <summary>Final gravity in gravity points (10 = 1.010).</summary>
+        public int FinalGravityPoints { get; set; }
+
+        /// <summary>Apparent attenuation, basis points (8000 = 80%).</summary>
+        public int AttenuationBasisPoints { get; set; }
+
+        /// <summary>Alcohol by volume, basis points (500 = 5.00%).</summary>
+        public int AbvBasisPoints { get; set; }
+
         /// <summary>Execution axis: how well it was made.</summary>
         public int QualityBasisPoints { get; private set; } = 5000;
 
