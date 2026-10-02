@@ -18,7 +18,7 @@ namespace BreweryEmpire.Core.State
     /// </summary>
     public sealed class GameState
     {
-        public const int CurrentSaveVersion = 1;
+        public const int CurrentSaveVersion = 2;
 
         public int SaveVersion { get; set; } = CurrentSaveVersion;
         public int Seed { get; set; }

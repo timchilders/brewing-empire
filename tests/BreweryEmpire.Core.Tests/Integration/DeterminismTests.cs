@@ -202,17 +202,48 @@ namespace BreweryEmpire.Core.Tests.Integration
         public void Save_Records_Its_Version()
         {
             var s = TestScenario.Standard();
-            SaveSystem.Save(s).Should().Contain("\"SaveVersion\":1");
+            SaveSystem.Save(s).Should().Contain("\"SaveVersion\":2");
         }
 
         [Fact]
         public void A_Future_Save_Version_Is_Refused_Not_Silently_Mangled()
         {
             var s = TestScenario.Standard();
-            var json = SaveSystem.Save(s).Replace("\"SaveVersion\":1", "\"SaveVersion\":99");
+            var json = SaveSystem.Save(s).Replace("\"SaveVersion\":2", "\"SaveVersion\":99");
 
             Action act = () => SaveSystem.Load(json);
             act.Should().Throw<InvalidOperationException>().WithMessage("*newer than this build*");
+        }
+
+        [Fact]
+        public void A_Version_1_Save_Loads_With_Phase_2_Defaults()
+        {
+            // A hand-written v1 save: the exact shape Phase 1 wrote — no
+            // Markets, no Shipments, no batch-chemistry fields. The loader
+            // must default the missing collections/fields rather than throw.
+            var v1Json = @"
+            {
+              ""SaveVersion"": 1,
+              ""Seed"": 12345,
+              ""DateTotalDays"": 0,
+              ""ReputationBasisPoints"": 5000,
+              ""IsBankrupt"": false,
+              ""NextEntityNumber"": 1,
+              ""LedgerBalanceCents"": 200000,
+              ""LedgerEntries"": [ { ""DateTotalDays"": 0, ""Category"": 3, ""AmountCents"": 200000, ""Description"": ""Opening capital"" } ],
+              ""Nodes"": [],
+              ""Staff"": [],
+              ""Recipes"": [],
+              ""Rivals"": []
+            }";
+
+            var loaded = SaveSystem.Load(v1Json);
+
+            loaded.SaveVersion.Should().Be(1);
+            loaded.Markets.Should().BeEmpty();
+            loaded.Shipments.Should().BeEmpty();
+            loaded.World.NodeCount.Should().Be(0);
+            loaded.Ledger.Balance.Cents.Should().Be(200000);
         }
 
         [Fact]
