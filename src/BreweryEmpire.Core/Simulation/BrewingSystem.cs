@@ -103,6 +103,8 @@ namespace BreweryEmpire.Core.Simulation
             batch.FinalGravityPoints = fg;
             batch.AttenuationBasisPoints = attenuation;
             batch.AbvBasisPoints = abv;
+            batch.IbuTenths = HopChemistry.IbuTenths(recipe, state.Catalog, recipe.TargetVolumeLitres);
+            batch.SrmLovibond = recipe.EstimatedColorLovibond(state.Catalog);
 
             vessel.Occupy(batchId, recipe.TotalDaysToReady);
             node.AddBatch(batch);

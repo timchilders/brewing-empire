@@ -50,6 +50,12 @@ namespace BreweryEmpire.Core.Model.Brewing
         /// <summary>Alcohol by volume, basis points (500 = 5.00%).</summary>
         public int AbvBasisPoints { get; set; }
 
+        /// <summary>Bitterness in tenths of an IBU (350 = 35.0 IBU).</summary>
+        public int IbuTenths { get; set; }
+
+        /// <summary>Colour in Lovibond (SRM).</summary>
+        public int SrmLovibond { get; set; }
+
         /// <summary>Execution axis: how well it was made.</summary>
         public int QualityBasisPoints { get; private set; } = 5000;
 
