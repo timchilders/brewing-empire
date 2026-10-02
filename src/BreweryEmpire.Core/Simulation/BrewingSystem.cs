@@ -111,6 +111,10 @@ namespace BreweryEmpire.Core.Simulation
             vessel.Occupy(batchId, recipe.TotalDaysToReady);
             node.AddBatch(batch);
 
+            // Staff learn by doing.
+            StaffProgression.OnSuccessfulBrew(state, nodeId, StaffRole.Brewmaster, 10);
+            StaffProgression.OnSuccessfulBrew(state, nodeId, StaffRole.Maltster, 5);
+
             return BrewResult.Ok(batch);
         }
 

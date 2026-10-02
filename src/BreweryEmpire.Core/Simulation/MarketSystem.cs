@@ -78,7 +78,7 @@ namespace BreweryEmpire.Core.Simulation
 
             foreach (var batch in sellable)
             {
-                int demand = market.EffectiveDemandLitres(batch.Style, state.Date);
+                int demand = RivalSystem.EffectivePlayerDemand(market, batch.Style, state.Date, state.Rivals);
                 if (demand <= 0) continue;
 
                 int litres = Math.Min(demand, batch.VolumeLitres);
