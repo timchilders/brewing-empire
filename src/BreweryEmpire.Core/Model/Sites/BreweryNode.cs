@@ -40,6 +40,12 @@ namespace BreweryEmpire.Core.Model.Sites
         public Inventory Inventory { get; } = new Inventory();
         public Money DailyOverhead { get; set; }
 
+        /// <summary>
+        /// Whether this site can ferment cold (ice house / refrigerated warehouse).
+        /// Negates the ambient temperature penalty in FermentationSystem.
+        /// </summary>
+        public bool HasColdStorage { get; set; }
+
         public IReadOnlyList<Vessel> Vessels => _vessels;
         public IReadOnlyList<Batch> Batches => _batches;
         public IReadOnlyDictionary<PackagingType, ContainerPool> Containers => _containers;

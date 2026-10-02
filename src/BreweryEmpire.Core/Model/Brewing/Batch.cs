@@ -33,6 +33,12 @@ namespace BreweryEmpire.Core.Model.Brewing
         public string NodeId { get; set; } = string.Empty;
         public VesselId VesselId { get; set; }
 
+        /// <summary>The yeast strain pitched (ale-yeast / lager-yeast).</summary>
+        public string YeastIngredientId { get; set; } = "ale-yeast";
+
+        /// <summary>Repitch count; higher generations drift and attenuate less.</summary>
+        public int YeastGeneration { get; set; } = 1;
+
         public int VolumeLitres { get; private set; }
         public BatchState State { get; private set; } = BatchState.Fermenting;
         public GameDate BrewedOn { get; set; }

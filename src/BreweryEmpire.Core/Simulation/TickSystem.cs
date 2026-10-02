@@ -26,26 +26,15 @@ namespace BreweryEmpire.Core.Simulation
             // invariant both break.
             state.Date = state.Date.AddDays(1);
 
-            // 2. Vessels tick, freeing any whose occupancy expired.
+            // 2. Fermentation: vessels tick, temperature applies, batches ready.
             foreach (var node in state.World.Nodes)
-                node.AdvanceVesselsOneDay();
+                FermentationSystem.ProcessNode(state, node);
 
             // 3. Infection rolls against today's temperature.
             foreach (var node in state.World.Nodes)
                 SpoilageSystem.ProcessNode(state, node);
 
-            // 4. Batches that reached their ready date become sellable.
-            foreach (var node in state.World.Nodes)
-            {
-                foreach (var batch in node.Batches.ToList())
-                {
-                    if (batch.State != BatchState.Fermenting) continue;
-                    if (state.Date < batch.ReadyOn) continue;
-                    batch.MarkReady();
-                }
-            }
-
-            // 5. Sell finished beer.
+            // 4. Sell finished beer.
             foreach (var node in state.World.Nodes)
                 SalesSystem.ProcessNode(state, node);
 

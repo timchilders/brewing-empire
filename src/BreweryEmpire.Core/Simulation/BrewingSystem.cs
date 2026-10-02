@@ -87,7 +87,8 @@ namespace BreweryEmpire.Core.Simulation
                                   recipe.TargetVolumeLitres, state.Date, readyOn)
             {
                 CostOfGoods = Money.FromCents(cogsCents),
-                Flavor = ComputeFlavor(state, recipe, node)
+                Flavor = ComputeFlavor(state, recipe, node),
+                YeastIngredientId = recipe.YeastIngredientId
             };
 
             batch.SetQuality(ComputeQuality(state, recipe, node, vessel));
