@@ -34,7 +34,7 @@ namespace BreweryEmpire.Core.Model.Research
                 Id = "drum-roaster", DisplayName = "Patent Drum Roaster", MinEra = Era.Industrial,
                 ResearchCostPoints = 220, PrerequisiteIds = new[] { "malting-kilns" },
                 Description = "Super-roasted unmalted barley for light-bodied dark stouts.",
-                LoreText = "Guinness-era roasting. (Effect deferred — no shelf-life model yet.)"
+                LoreText = "Guinness-era roasting: roasted barley lets dark beer keep far longer."
             },
             new TechNode
             {
@@ -82,7 +82,7 @@ namespace BreweryEmpire.Core.Model.Research
             {
                 Id = "stainless-steel", DisplayName = "Stainless Steel Vessels", MinEra = Era.Modern,
                 ResearchCostPoints = 500, PrerequisiteIds = new[] { "refrigeration" },
-                Description = "Maximum hygiene and consistency. (Effect deferred — no build system yet.)",
+                Description = "Maximum hygiene and consistency; unlocks stainless vessels.",
                 LoreText = "Inert steel displaces wood and copper."
             },
             new TechNode
