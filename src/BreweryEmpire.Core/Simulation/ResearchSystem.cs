@@ -4,6 +4,7 @@ using BreweryEmpire.Core.Model.Brewing;
 using BreweryEmpire.Core.Model.Logistics;
 using BreweryEmpire.Core.Model.Packaging;
 using BreweryEmpire.Core.Model.Research;
+using BreweryEmpire.Core.Model.Sites;
 using BreweryEmpire.Core.Model.Staff;
 using BreweryEmpire.Core.State;
 
@@ -90,6 +91,9 @@ namespace BreweryEmpire.Core.Simulation
         /// refrigerated-capable and mechanical refrigeration must be researched.</summary>
         public static bool CanRefrigerateShipment(GameState state, TransportMode mode) =>
             TransportSpec.For(mode).IsRefrigeratedCapable && HasTech(state, "refrigeration");
+
+        // Tier gating lands in Task B2; for now every material is buildable.
+        public static bool CanBuildTier(GameState state, EquipmentTier tier) => true;
 
         /// <summary>Retroactive effects. Flag-only techs (saccharometer, pure-yeast,
         /// pasteurization, water-chemistry, style gates) are consumed directly by the
