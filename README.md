@@ -53,7 +53,10 @@ build.
 4. Batches that reached conditioning end become sellable.
 5. `SalesSystem` sells what the local market absorbs; excise duty is charged.
 6. Daily upkeep posts; wages post on the first of the month.
-7. Bankruptcy is evaluated, ledger history is compacted, PRNG state is synced.
+7. Bankruptcy is evaluated; ledger history is compacted.
+8. `ResearchSystem` accrues research and may complete a tech; `EventSystem`
+   enqueues any newly-due historical events (both deterministic, run last).
+9. PRNG state is synced.
 
 Nodes are always visited in sorted-id order so replay never depends on
 insertion order.
@@ -72,3 +75,17 @@ resuming must continue identically — this is asserted by the integration tests
 - Vessel occupancy is a simple day counter, not a per-stage brewing timeline.
 - Rivals (`RivalBrewer`) are stubbed in Phase 1; the field exists so saves
   remain loadable once Phase 2 fills the type in.
+
+## Phase 3: research & events
+
+`TechCatalog` defines an era-gated research DAG (11 nodes across four eras).
+`ResearchSystem` lets chemists accrue research points daily; completing a node
+unlocks it and flips the Phase 2 mechanics it gates — malting kilns unlock dark
+styles, the saccharometer and water chemistry raise extract, pure yeast removes
+wild contamination, refrigeration and ice houses remove the seasonal temperature
+penalty, pasteurization toggles near-immunity, and the bottling line unlocks
+bottles/kegs/cans. `EventCatalog` + `EventSystem` offer deterministic,
+choice-based historical events (the pure-yeast dilemma, ice shortage, hop blight,
+temperance) whose typed effects hit money, prestige, reputation, excise duty and
+ice stock. Saves now carry research, prestige and event state (save version 3;
+older saves load with empty defaults).
