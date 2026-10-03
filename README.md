@@ -89,3 +89,20 @@ choice-based historical events (the pure-yeast dilemma, ice shortage, hop blight
 temperance) whose typed effects hit money, prestige, reputation, excise duty and
 ice stock. Saves now carry research, prestige and event state (save version 3;
 older saves load with empty defaults).
+
+## Phase 4: distribution, expansion & shelf-life
+
+`LogisticsSystem.DispatchShipment` now resolves a real transport mode (horse cart,
+canal, rail, ship) from the world's routes and charges each mode's own cost and
+transit time; draymen speed transit and coopers cut cask ullage. Beer rides in
+transit as a `Shipment` with a `Cargo` batch that preserves its quality, flavour,
+IBU/ABV and pasteurization, spoils in transit at the mode's spoilage rate
+(`SpoilageSystem.ProcessShipment`), and can ride refrigerated rail once the
+`refrigeration` tech is researched. `BuildSystem.TryPurchaseVessel` is the
+capital-expenditure surface for buying vessels — stainless vessels stay locked
+until the `stainless-steel` tech. Ready beer has a `ShelfLifeDays` (style,
+strength and the `drum-roaster` tech extend it); past shelf life it stales and
+eventually spoils. `ScenarioDefinition`/`ScenarioCatalog`/`ScenarioAssembler`
+assemble a full starting world (sites, vessels, routes, markets, staff, rivals)
+with one call. Saves now persist in-transit shipments and batch shelf-life
+(save version 4; older saves load with empty shipments and default shelf-life).
