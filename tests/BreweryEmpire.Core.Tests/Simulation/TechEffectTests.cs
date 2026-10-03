@@ -1,5 +1,6 @@
 using BreweryEmpire.Core.Model;
 using BreweryEmpire.Core.Model.Brewing;
+using BreweryEmpire.Core.Model.Logistics;
 using BreweryEmpire.Core.Model.Packaging;
 using BreweryEmpire.Core.Model.Recipes;
 using BreweryEmpire.Core.Simulation;
@@ -132,6 +133,18 @@ namespace BreweryEmpire.Core.Tests.Simulation
             LogisticsSystem.DispatchShipment(s, new NodeId("burton"), new NodeId("burton"),
                 batch.Id, 100, PackagingType.Bottle, 10)
                 .Should().NotBeNull();
+        }
+
+        [Fact]
+        public void Refrigerated_Shipping_Requires_Refrigeration_Tech_And_Rail()
+        {
+            var s = TestScenario.Standard();
+            ResearchSystem.CanRefrigerateShipment(s, TransportMode.SteamRail).Should().BeFalse();
+            ResearchSystem.CanRefrigerateShipment(s, TransportMode.HorseCart).Should().BeFalse();
+
+            ResearchSystem.Unlock(s, "refrigeration");
+            ResearchSystem.CanRefrigerateShipment(s, TransportMode.SteamRail).Should().BeTrue();
+            ResearchSystem.CanRefrigerateShipment(s, TransportMode.HorseCart).Should().BeFalse();
         }
     }
 }

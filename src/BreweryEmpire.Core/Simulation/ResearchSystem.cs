@@ -86,8 +86,10 @@ namespace BreweryEmpire.Core.Simulation
         public static bool IsPackagingUnlocked(GameState state, PackagingType type) =>
             type == PackagingType.WoodenCask || HasTech(state, "bottling-line");
 
-        // Temporary stub — real implementation in Task A7.
-        public static bool CanRefrigerateShipment(GameState state, TransportMode mode) => false;
+        /// <summary>Whether a shipment on this mode can ride refrigerated: the mode must be
+        /// refrigerated-capable and mechanical refrigeration must be researched.</summary>
+        public static bool CanRefrigerateShipment(GameState state, TransportMode mode) =>
+            TransportSpec.For(mode).IsRefrigeratedCapable && HasTech(state, "refrigeration");
 
         /// <summary>Retroactive effects. Flag-only techs (saccharometer, pure-yeast,
         /// pasteurization, water-chemistry, style gates) are consumed directly by the
