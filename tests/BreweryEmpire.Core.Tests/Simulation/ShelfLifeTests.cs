@@ -1,3 +1,4 @@
+using System.Linq;
 using BreweryEmpire.Core.Model;
 using BreweryEmpire.Core.Model.Brewing;
 using BreweryEmpire.Core.Model.Recipes;
@@ -54,6 +55,45 @@ namespace BreweryEmpire.Core.Tests.Simulation
             b.MarkReady();
             var now = b.ReadyOn.AddDays(10);
             b.AgeDays(now).Should().Be(10);
+        }
+
+        [Fact]
+        public void Staleness_Decay_Applies_Only_Past_Shelf_Life()
+        {
+            var s = TestScenario.Standard();
+            var b = BrewingSystem.TryStartBrew(s, new NodeId("burton"), new RecipeId("pale-ale")).Batch!;
+            b.MarkReady();
+
+            SpoilageSystem.StalenessDecayBasisPoints(b, b.ReadyOn.AddDays(1)).Should().Be(0);
+            SpoilageSystem.StalenessDecayBasisPoints(b, b.ReadyOn.AddDays(b.ShelfLifeDays + 1))
+                .Should().BeGreaterThan(0);
+        }
+
+        [Fact]
+        public void Stale_Ready_Beer_Loses_Quality()
+        {
+            var s = TestScenario.Standard();
+            var b = BrewingSystem.TryStartBrew(s, new NodeId("burton"), new RecipeId("pale-ale")).Batch!;
+            b.MarkReady();
+            b.SetQuality(5000);
+            var node = s.World.Get(new NodeId("burton"));
+
+            s.Date = b.ReadyOn.AddDays(b.ShelfLifeDays + 1);
+            SpoilageSystem.ProcessNode(s, node);
+
+            b.QualityBasisPoints.Should().BeLessThan(5000);
+        }
+
+        [Fact]
+        public void Shelf_Life_Round_Trips_Through_Save()
+        {
+            var s = TestScenario.Standard();
+            var b = BrewingSystem.TryStartBrew(s, new NodeId("burton"), new RecipeId("pale-ale")).Batch!;
+            int expected = b.ShelfLifeDays;
+
+            var reloaded = SaveSystem.Load(SaveSystem.Save(s));
+            var rb = reloaded.World.Get(new NodeId("burton")).Batches.First(x => x.Id == b.Id);
+            rb.ShelfLifeDays.Should().Be(expected);
         }
     }
 }

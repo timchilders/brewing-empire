@@ -126,6 +126,10 @@ namespace BreweryEmpire.Core.Simulation
         public static bool IsIntentionalSour(BeerStyle style, SpoilageOrganism organism) =>
             SpoilageModel.IsIntentionalSour(style, organism);
 
+        /// <summary>Daily quality loss (basis points) for ready beer past its shelf life.</summary>
+        internal static int StalenessDecayBasisPoints(Batch batch, GameDate now) =>
+            batch.State == BatchState.Ready && batch.AgeDays(now) > batch.ShelfLifeDays ? 25 : 0;
+
         /// <summary>Advance spoilage for every batch at a node.</summary>
         public static void ProcessNode(GameState state, BreweryNode node)
         {
@@ -138,6 +142,19 @@ namespace BreweryEmpire.Core.Simulation
             foreach (var batch in node.Batches.ToList())
             {
                 if (batch.State == BatchState.Spoiled) continue;
+
+                // Ready beer past its shelf life stales, then spoils.
+                int staleness = StalenessDecayBasisPoints(batch, state.Date);
+                if (staleness > 0)
+                {
+                    batch.AdjustQuality(-staleness);
+                    if (batch.QualityBasisPoints <= 0)
+                    {
+                        batch.MarkSpoiled();
+                        WriteOff(state, node, batch);
+                        continue;
+                    }
+                }
 
                 var vessel = node.Vessels.FirstOrDefault(v => v.Id == batch.VesselId);
                 bool hasActiveInfection = batch.Infections.Any(i =>

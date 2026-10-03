@@ -439,6 +439,7 @@ namespace BreweryEmpire.Core.State
             YeastGeneration = b.YeastGeneration,
             Style = (int)b.Style,
             IsPasteurized = b.IsPasteurized,
+            ShelfLifeDays = b.ShelfLifeDays,
             Infections = new List<Infection>(b.Infections)
         };
 
@@ -460,7 +461,8 @@ namespace BreweryEmpire.Core.State
                 YeastIngredientId = string.IsNullOrEmpty(b.YeastIngredientId) ? "ale-yeast" : b.YeastIngredientId,
                 YeastGeneration = Math.Max(1, b.YeastGeneration),
                 Style = (BeerStyle)b.Style,
-                IsPasteurized = b.IsPasteurized
+                IsPasteurized = b.IsPasteurized,
+                ShelfLifeDays = b.ShelfLifeDays > 0 ? b.ShelfLifeDays : 30
             };
 
             batch.SetQuality(b.QualityBasisPoints);
@@ -567,6 +569,7 @@ namespace BreweryEmpire.Core.State
             public int YeastGeneration { get; set; }
             public int Style { get; set; }
             public bool IsPasteurized { get; set; }
+            public int ShelfLifeDays { get; set; }
             public List<Infection>? Infections { get; set; }
         }
 
