@@ -50,5 +50,25 @@ namespace BreweryEmpire.Core.Tests.Simulation
             BuildSystem.TryPurchaseVessel(s, new NodeId("wh"),
                 VesselType.OpenFermenter, EquipmentTier.Copper, 1500).Should().BeNull();
         }
+
+        [Fact]
+        public void Stainless_Vessel_Requires_Stainless_Steel_Tech()
+        {
+            var s = TestScenario.Standard(openingCapitalWhole: 2000);
+            BuildSystem.TryPurchaseVessel(s, new NodeId("burton"),
+                VesselType.OpenFermenter, EquipmentTier.Stainless, 1500).Should().BeNull();
+
+            ResearchSystem.Unlock(s, "stainless-steel");
+            BuildSystem.TryPurchaseVessel(s, new NodeId("burton"),
+                VesselType.OpenFermenter, EquipmentTier.Stainless, 1500).Should().NotBeNull();
+        }
+
+        [Fact]
+        public void Wooden_Vessel_Is_Always_Buildable()
+        {
+            var s = TestScenario.Standard(openingCapitalWhole: 2000);
+            BuildSystem.TryPurchaseVessel(s, new NodeId("burton"),
+                VesselType.OpenFermenter, EquipmentTier.Wooden, 800).Should().NotBeNull();
+        }
     }
 }

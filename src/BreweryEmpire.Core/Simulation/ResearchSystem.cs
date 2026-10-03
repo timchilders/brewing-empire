@@ -92,8 +92,10 @@ namespace BreweryEmpire.Core.Simulation
         public static bool CanRefrigerateShipment(GameState state, TransportMode mode) =>
             TransportSpec.For(mode).IsRefrigeratedCapable && HasTech(state, "refrigeration");
 
-        // Tier gating lands in Task B2; for now every material is buildable.
-        public static bool CanBuildTier(GameState state, EquipmentTier tier) => true;
+        /// <summary>Whether a vessel of this material may be purchased. Only stainless is gated —
+        /// it needs the stainless-steel tech (and thus the Modern era).</summary>
+        public static bool CanBuildTier(GameState state, EquipmentTier tier) =>
+            tier != EquipmentTier.Stainless || HasTech(state, "stainless-steel");
 
         /// <summary>Retroactive effects. Flag-only techs (saccharometer, pure-yeast,
         /// pasteurization, water-chemistry, style gates) are consumed directly by the
