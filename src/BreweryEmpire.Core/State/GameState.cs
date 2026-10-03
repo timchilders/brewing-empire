@@ -18,7 +18,7 @@ namespace BreweryEmpire.Core.State
     /// </summary>
     public sealed class GameState
     {
-        public const int CurrentSaveVersion = 2;
+        public const int CurrentSaveVersion = 3;
 
         public int SaveVersion { get; set; } = CurrentSaveVersion;
         public int Seed { get; set; }
@@ -42,6 +42,19 @@ namespace BreweryEmpire.Core.State
 
         /// <summary>Reputation drives price realisation; starts neutral.</summary>
         public int ReputationBasisPoints { get; set; } = 5000;
+
+        /// <summary>Campaign-level research progress.</summary>
+        public ResearchState Research { get; set; } = new ResearchState();
+
+        /// <summary>Global prestige score; raised by tech/events, never negative.</summary>
+        public int PrestigeBasisPoints { get; set; }
+
+        /// <summary>Events awaiting a player choice.</summary>
+        public List<BreweryEmpire.Core.Model.Events.GameEvent> PendingEvents { get; set; } =
+            new List<BreweryEmpire.Core.Model.Events.GameEvent>();
+
+        /// <summary>Ids of events already resolved (one-shot dedupe).</summary>
+        public List<string> ResolvedEventIds { get; set; } = new List<string>();
 
         public bool IsBankrupt { get; set; }
 

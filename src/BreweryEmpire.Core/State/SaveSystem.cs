@@ -65,7 +65,11 @@ namespace BreweryEmpire.Core.State
                 IsBankrupt = s.IsBankrupt,
                 NextEntityNumber = s.NextEntityNumber,
                 LedgerBalanceCents = s.Ledger.Balance.Cents,
-                Rivals = s.Rivals
+                Rivals = s.Rivals,
+                Research = s.Research,
+                PrestigeBasisPoints = s.PrestigeBasisPoints,
+                PendingEvents = s.PendingEvents,
+                ResolvedEventIds = s.ResolvedEventIds
             };
 
             foreach (var e in s.Ledger.Entries)
@@ -235,7 +239,11 @@ namespace BreweryEmpire.Core.State
                 ReputationBasisPoints = dto.ReputationBasisPoints,
                 IsBankrupt = dto.IsBankrupt,
                 NextEntityNumber = dto.NextEntityNumber,
-                Rivals = dto.Rivals ?? new List<RivalBrewer>()
+                Rivals = dto.Rivals ?? new List<RivalBrewer>(),
+                Research = dto.Research ?? new ResearchState(),
+                PrestigeBasisPoints = dto.PrestigeBasisPoints,
+                PendingEvents = dto.PendingEvents ?? new List<BreweryEmpire.Core.Model.Events.GameEvent>(),
+                ResolvedEventIds = dto.ResolvedEventIds ?? new List<string>()
             };
 
             state.RestoreRandom();
@@ -451,6 +459,10 @@ namespace BreweryEmpire.Core.State
             public List<RecipeDto> Recipes { get; set; } = new List<RecipeDto>();
             public List<MarketDto> Markets { get; set; } = new List<MarketDto>();
             public List<RivalBrewer>? Rivals { get; set; }
+            public ResearchState? Research { get; set; }
+            public int PrestigeBasisPoints { get; set; }
+            public List<BreweryEmpire.Core.Model.Events.GameEvent>? PendingEvents { get; set; }
+            public List<string>? ResolvedEventIds { get; set; }
         }
 
         internal sealed class LedgerEntryDto
