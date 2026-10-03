@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using BreweryEmpire.Core.Economy;
 using BreweryEmpire.Core.Model.Brewing;
+using BreweryEmpire.Core.Model.Logistics;
 using BreweryEmpire.Core.Model.Sites;
 using BreweryEmpire.Core.Model.Staff;
 using BreweryEmpire.Core.State;
@@ -173,6 +174,47 @@ namespace BreweryEmpire.Core.Simulation
                 .OrderByDescending(i => i.ProgressionBasisPoints)
                 .Select(i => i.Organism)
                 .FirstOrDefault();
+
+        /// <summary>Advance spoilage for beer in transit. Reuses the two-stage model; the mode's
+        /// spoilage modifier and the refrigerated flag gate it.</summary>
+        public static void ProcessShipment(GameState state, Shipment shipment)
+        {
+            if (state == null) throw new ArgumentNullException(nameof(state));
+            if (shipment == null) throw new ArgumentNullException(nameof(shipment));
+            if (shipment.Cargo == null || shipment.Cargo.State == BatchState.Spoiled) return;
+
+            int ambient = state.World.TryGet(shipment.From, out var src)
+                ? src.Climate.AmbientTempOn(state.Date)
+                : 15;   // deterministic fallback
+
+            var spec = TransportSpec.For(shipment.Mode);
+            var cargo = shipment.Cargo;
+            bool cold = shipment.IsRefrigerated;
+
+            bool hasActive = cargo.Infections.Any(i =>
+                !i.IsIntentionalSour && i.ProgressionBasisPoints < 10000);
+
+            if (!hasActive)
+            {
+                int risk = BaseInfectionRiskBasisPoints(ambient);
+                risk = risk * spec.SpoilageModifierBasisPoints / 10000;
+                if (risk > 0 && state.Random.Chance(risk))
+                    cargo.ContractInfection(RollOrganism(state),
+                        "Transit " + shipment.Mode + " at " + ambient + "C");
+            }
+            else
+            {
+                int rate = ProgressionRateBasisPoints(
+                    ActiveOrganism(cargo), ambient, cargo.IbuTenths,
+                    cargo.AbvBasisPoints, cold, cargo.IsPasteurized);
+                rate = rate * spec.SpoilageModifierBasisPoints / 10000;
+                if (cargo.AdvanceInfection(rate))
+                    state.Ledger.ForceDebit(state.Date, LedgerCategory.SpoilageWriteOff,
+                        cargo.CostOfGoods,
+                        "Transit spoilage " + cargo.Id + " (" + shipment.Mode + ")",
+                        shipment.From.Value);
+            }
+        }
 
         /// <summary>Write a spoiled batch's COGS off to the ledger once.</summary>
         public static void WriteOff(GameState state, BreweryNode node, Batch batch)

@@ -111,6 +111,7 @@ namespace BreweryEmpire.Core.Simulation
             foreach (var shipment in state.Shipments.ToList())
             {
                 shipment.AdvanceDay();
+                SpoilageSystem.ProcessShipment(state, shipment);
 
                 if (shipment.IsArrived)
                 {
