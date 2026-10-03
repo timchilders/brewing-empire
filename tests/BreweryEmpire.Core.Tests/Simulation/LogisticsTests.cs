@@ -176,6 +176,37 @@ namespace BreweryEmpire.Core.Tests.Simulation
             s.Ledger.Balance.Cents.Should().BeLessThan(before);
         }
 
+        [Fact]
+        public void Dispatch_Uses_Registered_Route_Mode()
+        {
+            var s = TestScenario.Standard();
+            s.World.AddNode(new BreweryNode(new NodeId("london"), "London", NodeType.Warehouse,
+                new RegionId("london"), WaterProfile.London, RegionClimate.Dublin));
+            s.World.SetRoute(new NodeId("burton"), new NodeId("london"), 180, TransportMode.SteamRail);
+            var batch = BrewAndReady(s);
+
+            var sh = LogisticsSystem.DispatchShipment(s, new NodeId("burton"), new NodeId("london"),
+                batch.Id, 100, PackagingType.WoodenCask, distanceKm: 999)!;
+
+            sh.Mode.Should().Be(TransportMode.SteamRail);
+            sh.Cargo.Should().NotBeNull();
+            sh.Cargo!.Style.Should().Be(batch.Style);
+            sh.Cargo.QualityBasisPoints.Should().Be(batch.QualityBasisPoints);
+        }
+
+        [Fact]
+        public void Dispatch_Preserves_Brewing_Work_In_Cargo()
+        {
+            var s = TestScenario.Standard();
+            var batch = BrewAndReady(s);
+            var sh = LogisticsSystem.DispatchShipment(s, new NodeId("burton"), new NodeId("burton"),
+                batch.Id, 100, PackagingType.WoodenCask, distanceKm: 10)!;
+
+            sh.Cargo!.Flavor.Should().Be(batch.Flavor);
+            sh.Cargo.AbvBasisPoints.Should().Be(batch.AbvBasisPoints);
+            sh.Cargo.IsPasteurized.Should().Be(batch.IsPasteurized);
+        }
+
         private static Batch BrewAndReady(GameState s)
         {
             var res = BrewingSystem.TryStartBrew(s, new NodeId("burton"), new RecipeId("pale-ale"));

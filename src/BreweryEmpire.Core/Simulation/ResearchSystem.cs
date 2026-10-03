@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using BreweryEmpire.Core.Model.Brewing;
+using BreweryEmpire.Core.Model.Logistics;
 using BreweryEmpire.Core.Model.Packaging;
 using BreweryEmpire.Core.Model.Research;
 using BreweryEmpire.Core.Model.Staff;
@@ -84,6 +85,9 @@ namespace BreweryEmpire.Core.Simulation
 
         public static bool IsPackagingUnlocked(GameState state, PackagingType type) =>
             type == PackagingType.WoodenCask || HasTech(state, "bottling-line");
+
+        // Temporary stub — real implementation in Task A7.
+        public static bool CanRefrigerateShipment(GameState state, TransportMode mode) => false;
 
         /// <summary>Retroactive effects. Flag-only techs (saccharometer, pure-yeast,
         /// pasteurization, water-chemistry, style gates) are consumed directly by the

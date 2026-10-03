@@ -6,6 +6,7 @@ using BreweryEmpire.Core.Model.Brewing;
 using BreweryEmpire.Core.Model.Logistics;
 using BreweryEmpire.Core.Model.Packaging;
 using BreweryEmpire.Core.Model.Sites;
+using BreweryEmpire.Core.Model.Staff;
 using BreweryEmpire.Core.State;
 
 namespace BreweryEmpire.Core.Simulation
@@ -24,6 +25,15 @@ namespace BreweryEmpire.Core.Simulation
         public static Shipment? DispatchShipment(GameState state, NodeId from, NodeId to,
                                                 BatchId batchId, int litres,
                                                 PackagingType packaging, int distanceKm)
+            => DispatchShipment(state, from, to, batchId, litres, packaging,
+                                TransportMode.HorseCart, distanceKm);
+
+        /// <summary>Dispatch a shipment by an explicit mode. Preserves the beer's quality/flavour
+        /// as cargo; charges the mode's real per-litre cost.</summary>
+        public static Shipment? DispatchShipment(GameState state, NodeId from, NodeId to,
+                                                BatchId batchId, int litres,
+                                                PackagingType packaging, TransportMode mode,
+                                                int distanceKm, bool refrigerated = false)
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
 
@@ -33,25 +43,63 @@ namespace BreweryEmpire.Core.Simulation
             var batch = node.Batches.FirstOrDefault(b => b.Id == batchId);
             if (batch == null || batch.VolumeLitres < litres) return null;
 
-            var spec = TransportSpec.For(TransportMode.HorseCart);
-            var route = new Route
+            // Prefer the registered route's distance and mode; the arguments are a fallback.
+            int distance = distanceKm;
+            if (state.World.TryGetRoute(from, to, out var route))
             {
-                From = from, To = to, DistanceKm = distanceKm, Mode = TransportMode.HorseCart
+                distance = route.DistanceKm;
+                if (route.Mode != null) mode = route.Mode.Value;
+            }
+
+            var spec = TransportSpec.For(mode);
+            var routeForCost = new Route { From = from, To = to, DistanceKm = distance, Mode = mode };
+
+            // Draymen speed transit.
+            int draymanBonus = state.Staff.AggregateBonus(from.Value, TraitEffect.TransitSpeed);
+            int transitDays = routeForCost.TransitDays;
+            if (draymanBonus > 0)
+                transitDays = Math.Max(1, transitDays * (10000 - draymanBonus) / 10000);
+
+            // Refrigeration only on a capable mode, gated by the refrigeration tech.
+            bool isRefrigerated = refrigerated && ResearchSystem.CanRefrigerateShipment(state, mode);
+
+            var cargo = new Batch(new BatchId(state.MintId("batch")), batch.RecipeId,
+                                  batch.NodeId, batch.VesselId, litres, state.Date, state.Date)
+            {
+                Style = batch.Style,
+                IsPasteurized = batch.IsPasteurized,
+                OriginalGravityPoints = batch.OriginalGravityPoints,
+                FinalGravityPoints = batch.FinalGravityPoints,
+                AttenuationBasisPoints = batch.AttenuationBasisPoints,
+                AbvBasisPoints = batch.AbvBasisPoints,
+                IbuTenths = batch.IbuTenths,
+                SrmLovibond = batch.SrmLovibond,
+                YeastIngredientId = batch.YeastIngredientId,
+                YeastGeneration = batch.YeastGeneration,
+                Flavor = batch.Flavor,
+                CostOfGoods = batch.CostPerLitre * litres
             };
+            cargo.SetQuality(batch.QualityBasisPoints);
+            cargo.MarkReady();
+            foreach (var inf in batch.Infections) cargo.RestoreInfection(inf);
 
             var shipmentId = new ShipmentId(state.MintId("shipment"));
             var shipment = new Shipment(shipmentId, batchId, from, to,
-                                        route.TransitDays, packaging, litres)
+                                        transitDays, packaging, litres)
             {
-                TransportCost = Money.FromCents((long)route.CostPerLitre.Cents * litres)
+                Mode = mode,
+                IsRefrigerated = isRefrigerated,
+                Cargo = cargo,
+                TransportCost = Money.FromCents((long)routeForCost.CostPerLitre.Cents * litres)
             };
 
             batch.Remove(litres);
             state.Ledger.ForceDebit(state.Date, LedgerCategory.TransportCost,
                                     shipment.TransportCost,
-                                    "Shipment " + shipmentId + " " + from + " -> " + to,
+                                    "Shipment " + shipmentId + " " + from + " -> " + to + " (" + mode + ")",
                                     from.Value);
 
+            state.Shipments.Add(shipment);
             return shipment;
         }
 
