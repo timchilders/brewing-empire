@@ -76,5 +76,24 @@ namespace BreweryEmpire.Core.Tests.Integration
             var result = Run();
             result.Should().Be(Run());
         }
+
+        [Fact]
+        public void Save_Load_Resume_Is_Identical_With_Shipments_And_Builds()
+        {
+            var s = London1890();
+            BrewingSystem.TryStartBrew(s, new NodeId("london"), new RecipeId("pale-ale"));
+            BuildSystem.TryPurchaseVessel(s, new NodeId("london"), VesselType.OpenFermenter, EquipmentTier.Stainless, 4000);
+            var batch = s.World.Get(new NodeId("london")).Batches.First(b => b.VolumeLitres >= 100);
+            batch.MarkReady();
+            LogisticsSystem.DispatchShipment(s, new NodeId("london"), new NodeId("hamburg"),
+                batch.Id, 100, PackagingType.Bottle, TransportMode.SteamRail, 700, refrigerated: true);
+
+            var reloaded = SaveSystem.Load(SaveSystem.Save(s));
+
+            reloaded.Shipments.Should().HaveCount(1);
+            TickSystem.AdvanceDays(reloaded, 30);
+            TickSystem.AdvanceDays(s, 30);
+            TestScenario.Fingerprint(reloaded).Should().Be(TestScenario.Fingerprint(s));
+        }
     }
 }
