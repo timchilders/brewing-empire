@@ -1,5 +1,6 @@
 using System;
 using BreweryEmpire.Core.Economy;
+using BreweryEmpire.Core.Model.Brewing;
 using BreweryEmpire.Core.Model.Packaging;
 using BreweryEmpire.Core.Model.Sites;
 
@@ -34,6 +35,15 @@ namespace BreweryEmpire.Core.Model.Logistics
         public int VolumeLitres { get; private set; }
         public int DaysRemaining { get; private set; }
         public Money TransportCost { get; set; }
+
+        /// <summary>How this shipment travels (speed/cost/spoilage trade-off).</summary>
+        public TransportMode Mode { get; set; } = TransportMode.HorseCart;
+
+        /// <summary>True if the cargo rides in a refrigerated hold (rail, post-refrigeration).</summary>
+        public bool IsRefrigerated { get; set; }
+
+        /// <summary>The beer in transit, as a batch snapshot preserving quality/flavour/style.</summary>
+        public Batch? Cargo { get; set; }
 
         public Shipment() { }
 
