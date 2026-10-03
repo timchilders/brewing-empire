@@ -119,6 +119,7 @@ namespace BreweryEmpire.Core.Simulation
             batch.AbvBasisPoints = abv;
             batch.IbuTenths = HopChemistry.IbuTenths(recipe, state.Catalog, recipe.TargetVolumeLitres);
             batch.SrmLovibond = recipe.EstimatedColorLovibond(state.Catalog);
+            batch.ShelfLifeDays = ShelfLifeFor(state, recipe.Style, abv);
 
             vessel.Occupy(batchId, recipe.TotalDaysToReady);
             node.AddBatch(batch);
@@ -128,6 +129,19 @@ namespace BreweryEmpire.Core.Simulation
             StaffProgression.OnSuccessfulBrew(state, nodeId, StaffRole.Maltster, 5);
 
             return BrewResult.Ok(batch);
+        }
+
+        /// <summary>Base keeping quality. Dark, hoppy, strong beer keeps; the drum roaster's
+        /// super-roasted barley extends dark styles further.</summary>
+        internal static int ShelfLifeFor(GameState state, BeerStyle style, int abvBasisPoints)
+        {
+            int days = 30;
+            if (style == BeerStyle.Porter || style == BeerStyle.Stout || style == BeerStyle.Mild) days += 15;
+            days += abvBasisPoints / 40;   // strength preserves
+            if (ResearchSystem.HasTech(state, "drum-roaster") &&
+                (style == BeerStyle.Porter || style == BeerStyle.Stout))
+                days += 45;
+            return days;
         }
 
         /// <summary>

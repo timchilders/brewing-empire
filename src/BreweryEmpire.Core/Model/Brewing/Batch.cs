@@ -51,6 +51,12 @@ namespace BreweryEmpire.Core.Model.Brewing
         public GameDate BrewedOn { get; set; }
         public GameDate ReadyOn { get; set; }
 
+        /// <summary>Days the beer keeps before it starts to stale (style/strength/tech driven).</summary>
+        public int ShelfLifeDays { get; set; } = 30;
+
+        /// <summary>Days since the batch became ready to sell.</summary>
+        public int AgeDays(GameDate now) => Math.Max(0, now.TotalDays - ReadyOn.TotalDays);
+
         /// <summary>Original gravity in gravity points (50 = 1.050).</summary>
         public int OriginalGravityPoints { get; set; }
 
