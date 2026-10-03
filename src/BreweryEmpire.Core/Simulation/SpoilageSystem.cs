@@ -41,6 +41,13 @@ namespace BreweryEmpire.Core.Simulation
             return 1000;
         }
 
+        /// <summary>Roll the infecting organism. Pure yeast removes the wild-yeast class.</summary>
+        internal static SpoilageOrganism RollOrganism(GameState state)
+        {
+            int maxExclusive = ResearchSystem.HasTech(state, "pure-yeast") ? 4 : 5;   // 4 excludes WildYeast
+            return (SpoilageOrganism)state.Random.NextInt(0, maxExclusive);
+        }
+
         /// <summary>
         /// Daily infection chance for one batch, after hygiene and staff
         /// mitigation. Never negative.
@@ -141,7 +148,7 @@ namespace BreweryEmpire.Core.Simulation
                     int risk = InfectionRiskFor(state, node, vessel);
                     if (risk > 0 && state.Random.Chance(risk))
                     {
-                        var organism = (SpoilageOrganism)state.Random.NextInt(0, 5);
+                        var organism = RollOrganism(state);
                         batch.ContractInfection(organism,
                             "Ambient " + ambient + "C, hygiene " +
                             (vessel?.EffectiveHygieneBasisPoints ?? node.AverageHygieneBasisPoints) + "bp");

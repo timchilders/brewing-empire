@@ -49,6 +49,12 @@ namespace BreweryEmpire.Core.Simulation
             //    they still walk out.
             EconomySystem.CheckBankruptcy(state);
             state.Ledger.CompactHistory(state.Date);
+
+            // 8. Research accrues and may complete; due events are enqueued. Both are
+            //    deterministic (no RNG) and order-independent, so they run last.
+            ResearchSystem.ProcessDay(state);
+            EventSystem.ProcessDay(state);
+
             state.SyncRandomState();
         }
 

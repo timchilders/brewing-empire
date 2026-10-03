@@ -27,6 +27,8 @@ namespace BreweryEmpire.Core.Simulation
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
 
+            if (!ResearchSystem.IsPackagingUnlocked(state, packaging)) return null;
+
             var node = state.World.Get(from);
             var batch = node.Batches.FirstOrDefault(b => b.Id == batchId);
             if (batch == null || batch.VolumeLitres < litres) return null;

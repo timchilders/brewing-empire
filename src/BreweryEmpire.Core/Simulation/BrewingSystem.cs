@@ -5,6 +5,7 @@ using BreweryEmpire.Core.Model;
 using BreweryEmpire.Core.Model.Brewing;
 using BreweryEmpire.Core.Model.Ingredients;
 using BreweryEmpire.Core.Model.Recipes;
+using BreweryEmpire.Core.Model.Research;
 using BreweryEmpire.Core.Model.Sites;
 using BreweryEmpire.Core.Model.Staff;
 using BreweryEmpire.Core.State;
@@ -19,7 +20,8 @@ namespace BreweryEmpire.Core.Simulation
         InsufficientIngredients = 2,
         InsufficientDiastaticPower = 3,
         InsufficientFunds = 4,
-        UnknownRecipe = 5
+        UnknownRecipe = 5,
+        LockedStyle = 6
     }
 
     public sealed class BrewResult
@@ -55,6 +57,10 @@ namespace BreweryEmpire.Core.Simulation
 
             if (!recipe.HasSufficientDiastaticPower(state.Catalog))
                 return BrewResult.Fail(BrewFailureReason.InsufficientDiastaticPower);
+
+            var requiredTech = TechCatalog.RequiredTechFor(recipe.Style);
+            if (requiredTech != null && !ResearchSystem.HasTech(state, requiredTech))
+                return BrewResult.Fail(BrewFailureReason.LockedStyle);
 
             var vessel = node.FindAvailableVessel(VesselType.OpenFermenter, recipe.TargetVolumeLitres);
             if (vessel == null)
@@ -97,9 +103,15 @@ namespace BreweryEmpire.Core.Simulation
             // Gravity from mash chemistry. Water fit is neutral for now (the
             // recipe carries no target water yet) — Block C wires style water.
             var maltsterBonus = state.Staff.AggregateBonus(node.Id.Value, TraitEffect.MashEfficiency);
+            if (ResearchSystem.HasTech(state, "saccharometer")) maltsterBonus += 500;
+
+            int waterFit = 10000;
+            if (ResearchSystem.HasTech(state, "water-chemistry"))
+                waterFit = 10000 + node.Water.FitScoreBasisPoints(TechCatalog.TargetWaterFor(recipe.Style)) / 4;
+
             var (og, fg, attenuation, abv) = MashChemistry.ComputeGravity(
                 recipe, state.Catalog, vessel.Tier, vessel.ConditionBasisPoints,
-                waterFitBasisPoints: 10000, maltsterBonusBasisPoints: maltsterBonus);
+                waterFitBasisPoints: waterFit, maltsterBonusBasisPoints: maltsterBonus);
 
             batch.OriginalGravityPoints = og;
             batch.FinalGravityPoints = fg;
@@ -127,6 +139,9 @@ namespace BreweryEmpire.Core.Simulation
                                            BreweryNode node, Vessel vessel)
         {
             int baseQuality = 3000;
+
+            // Carlsberg's pure culture raises the floor on every brew.
+            if (ResearchSystem.HasTech(state, "pure-yeast")) baseQuality += 500;
 
             var brewmaster = state.Staff.BestFor(node.Id.Value, StaffRole.Brewmaster);
             int skill = brewmaster?.SkillBasisPoints ?? 0;
