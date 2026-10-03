@@ -4,6 +4,7 @@ using System.Linq;
 using BreweryEmpire.Core.Economy;
 using BreweryEmpire.Core.Model;
 using BreweryEmpire.Core.Model.Brewing;
+using BreweryEmpire.Core.Model.Logistics;
 using BreweryEmpire.Core.Model.Sites;
 using BreweryEmpire.Core.State;
 using FluentAssertions;
@@ -251,6 +252,25 @@ namespace BreweryEmpire.Core.Tests.Model.Sites
 
             map.Nodes.Select(n => n.Id.Value)
                .Should().ContainInOrder("alpha", "mango", "zebra");
+        }
+
+        [Fact]
+        public void Route_Remembers_Its_Mode()
+        {
+            var map = new WorldMap();
+            map.SetRoute(new NodeId("a"), new NodeId("b"), 180, TransportMode.SteamRail);
+            map.TryGetRoute(new NodeId("a"), new NodeId("b"), out var r).Should().BeTrue();
+            r.DistanceKm.Should().Be(180);
+            r.Mode.Should().Be(TransportMode.SteamRail);
+        }
+
+        [Fact]
+        public void Route_Without_Mode_Has_Null_Mode()
+        {
+            var map = new WorldMap();
+            map.SetRoute(new NodeId("a"), new NodeId("b"), 50);
+            map.TryGetRoute(new NodeId("a"), new NodeId("b"), out var r).Should().BeTrue();
+            r.Mode.Should().BeNull();
         }
     }
 }

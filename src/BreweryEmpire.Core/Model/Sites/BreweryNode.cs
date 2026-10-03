@@ -4,6 +4,7 @@ using System.Linq;
 using BreweryEmpire.Core.Economy;
 using BreweryEmpire.Core.Model.Brewing;
 using BreweryEmpire.Core.Model.Ingredients;
+using BreweryEmpire.Core.Model.Logistics;
 using BreweryEmpire.Core.Model.Packaging;
 using BreweryEmpire.Core.State;
 
@@ -178,8 +179,15 @@ namespace BreweryEmpire.Core.Model.Sites
         private readonly Dictionary<string, BreweryNode> _nodes =
             new Dictionary<string, BreweryNode>(StringComparer.Ordinal);
 
-        private readonly Dictionary<string, int> _routeDistancesKm =
-            new Dictionary<string, int>(StringComparer.Ordinal);
+        /// <summary>A route between two nodes, with an optional transport mode.</summary>
+        public sealed record WorldRoute
+        {
+            public int DistanceKm { get; init; }
+            public TransportMode? Mode { get; init; }
+        }
+
+        private readonly Dictionary<string, WorldRoute> _routes =
+            new Dictionary<string, WorldRoute>(StringComparer.Ordinal);
 
         public IEnumerable<BreweryNode> Nodes => _nodes.Values.OrderBy(n => n.Id.Value, StringComparer.Ordinal);
 
@@ -206,18 +214,24 @@ namespace BreweryEmpire.Core.Model.Sites
                 : b.Value + "|" + a.Value;
 
         /// <summary>Routes are symmetric: distance from A to B equals B to A.</summary>
-        public void SetRoute(NodeId a, NodeId b, int distanceKm)
+        public void SetRoute(NodeId a, NodeId b, int distanceKm) =>
+            SetRoute(a, b, distanceKm, null);
+
+        public void SetRoute(NodeId a, NodeId b, int distanceKm, TransportMode? mode)
         {
             if (distanceKm < 0) throw new ArgumentOutOfRangeException(nameof(distanceKm));
             if (a == b) throw new ArgumentException("A node cannot have a route to itself.");
-            _routeDistancesKm[RouteKey(a, b)] = distanceKm;
+            _routes[RouteKey(a, b)] = new WorldRoute { DistanceKm = distanceKm, Mode = mode };
         }
 
-        public bool HasRoute(NodeId a, NodeId b) => _routeDistancesKm.ContainsKey(RouteKey(a, b));
+        public bool HasRoute(NodeId a, NodeId b) => _routes.ContainsKey(RouteKey(a, b));
 
         public int DistanceKm(NodeId a, NodeId b) =>
-            _routeDistancesKm.TryGetValue(RouteKey(a, b), out var d)
-                ? d
+            _routes.TryGetValue(RouteKey(a, b), out var r)
+                ? r.DistanceKm
                 : throw new KeyNotFoundException("No route between " + a + " and " + b + ".");
+
+        public bool TryGetRoute(NodeId a, NodeId b, out WorldRoute route) =>
+            _routes.TryGetValue(RouteKey(a, b), out route!);
     }
 }
