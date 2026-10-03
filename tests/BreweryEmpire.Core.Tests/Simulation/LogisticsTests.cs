@@ -207,6 +207,38 @@ namespace BreweryEmpire.Core.Tests.Simulation
             sh.Cargo.IsPasteurized.Should().Be(batch.IsPasteurized);
         }
 
+        [Fact]
+        public void Delivered_Beer_Keeps_Its_Recipe_And_Quality()
+        {
+            var s = TestScenario.Standard();
+            var batch = BrewAndReady(s);
+            LogisticsSystem.DispatchShipment(s, new NodeId("burton"), new NodeId("burton"),
+                batch.Id, 100, PackagingType.WoodenCask, distanceKm: 1);
+
+            LogisticsSystem.ProcessShipments(s);
+
+            var dest = s.World.Get(new NodeId("burton"));
+            var arrived = dest.Batches.SingleOrDefault(b => b.Id != batch.Id && b.RecipeId == batch.RecipeId);
+            arrived.Should().NotBeNull();
+            arrived!.QualityBasisPoints.Should().Be(batch.QualityBasisPoints);
+            arrived.IbuTenths.Should().Be(batch.IbuTenths);
+        }
+
+        [Fact]
+        public void Cask_Shipment_Arrives_Lighter_Than_Dispatched()
+        {
+            var s = TestScenario.Standard();
+            var batch = BrewAndReady(s);
+            LogisticsSystem.DispatchShipment(s, new NodeId("burton"), new NodeId("burton"),
+                batch.Id, 1000, PackagingType.WoodenCask, distanceKm: 1);
+
+            LogisticsSystem.ProcessShipments(s);
+
+            var dest = s.World.Get(new NodeId("burton"));
+            var arrived = dest.Batches.Single(b => b.Id != batch.Id);
+            arrived.VolumeLitres.Should().BeLessThan(1000);
+        }
+
         private static Batch BrewAndReady(GameState s)
         {
             var res = BrewingSystem.TryStartBrew(s, new NodeId("burton"), new RecipeId("pale-ale"));

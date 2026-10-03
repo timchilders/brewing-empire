@@ -123,9 +123,22 @@ namespace BreweryEmpire.Core.Simulation
 
         private static void Deliver(GameState state, Shipment shipment)
         {
-            // Beer reappears at the destination node as a ready batch.
             if (!state.World.TryGet(shipment.To, out var dest)) return;
 
+            if (shipment.Cargo != null)
+            {
+                // Coopers cut ullage; casks leak, sealed bottles lose nothing.
+                int ullage = PackagingSpec.For(shipment.Packaging).UllageLossBasisPointsPerLeg;
+                int cooperBonus = state.Staff.AggregateBonus(shipment.From.Value, TraitEffect.ContainerLossReduction);
+                if (cooperBonus > 0)
+                    ullage = ullage * Math.Max(0, 10000 - cooperBonus) / 10000;
+
+                shipment.Cargo.ApplyLossBasisPoints(ullage);
+                dest.AddBatch(shipment.Cargo);
+                return;
+            }
+
+            // Fallback: a shipment built by hand (tests) still delivers a ready batch.
             var batch = new Batch(new BatchId(state.MintId("batch")),
                                   new RecipeId("shipped"), shipment.To.Value,
                                   new VesselId("none"), shipment.VolumeLitres,
