@@ -1,4 +1,8 @@
+using BreweryEmpire.Core.Model;
 using BreweryEmpire.Core.Model.Events;
+using BreweryEmpire.Core.Model.Logistics;
+using BreweryEmpire.Core.Model.Packaging;
+using BreweryEmpire.Core.Simulation;
 using BreweryEmpire.Core.State;
 using FluentAssertions;
 using Xunit;
@@ -42,6 +46,42 @@ namespace BreweryEmpire.Core.Tests.State
             reloaded.Research.ActiveTechId.Should().BeNull();
             reloaded.PrestigeBasisPoints.Should().Be(0);
             reloaded.PendingEvents.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void Shipments_In_Transit_Round_Trip()
+        {
+            var s = TestScenario.Standard();
+            var r = BrewingSystem.TryStartBrew(s, new NodeId("burton"), new RecipeId("pale-ale"));
+            var batch = r.Batch!;
+            batch.MarkReady();
+
+            var sh = new Shipment(new ShipmentId("s1"), batch.Id,
+                new NodeId("burton"), new NodeId("london"), 5, PackagingType.WoodenCask, 100)
+            {
+                Mode = TransportMode.SteamRail,
+                IsRefrigerated = true,
+                Cargo = batch
+            };
+            s.Shipments.Add(sh);
+
+            var reloaded = SaveSystem.Load(SaveSystem.Save(s));
+            reloaded.Shipments.Should().ContainSingle(x => x.Id == sh.Id);
+            var sh2 = reloaded.Shipments[0];
+            sh2.Mode.Should().Be(TransportMode.SteamRail);
+            sh2.IsRefrigerated.Should().BeTrue();
+            sh2.Cargo.Should().NotBeNull();
+            sh2.Cargo!.Style.Should().Be(batch.Style);
+            sh2.Cargo.QualityBasisPoints.Should().Be(batch.QualityBasisPoints);
+        }
+
+        [Fact]
+        public void Version_3_Save_Loads_With_No_Shipments()
+        {
+            var s = TestScenario.Standard();
+            var json = SaveSystem.Save(s).Replace("\"SaveVersion\":4", "\"SaveVersion\":3");
+            var reloaded = SaveSystem.Load(json);
+            reloaded.Shipments.Should().BeEmpty();
         }
     }
 }

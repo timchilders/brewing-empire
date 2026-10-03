@@ -202,14 +202,14 @@ namespace BreweryEmpire.Core.Tests.Integration
         public void Save_Records_Its_Version()
         {
             var s = TestScenario.Standard();
-            SaveSystem.Save(s).Should().Contain("\"SaveVersion\":3");
+            SaveSystem.Save(s).Should().Contain("\"SaveVersion\":4");
         }
 
         [Fact]
         public void A_Future_Save_Version_Is_Refused_Not_Silently_Mangled()
         {
             var s = TestScenario.Standard();
-            var json = SaveSystem.Save(s).Replace("\"SaveVersion\":3", "\"SaveVersion\":99");
+            var json = SaveSystem.Save(s).Replace("\"SaveVersion\":4", "\"SaveVersion\":99");
 
             Action act = () => SaveSystem.Load(json);
             act.Should().Throw<InvalidOperationException>().WithMessage("*newer than this build*");

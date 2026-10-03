@@ -6,6 +6,8 @@ using BreweryEmpire.Core.Economy;
 using BreweryEmpire.Core.Model;
 using BreweryEmpire.Core.Model.Brewing;
 using BreweryEmpire.Core.Model.Ingredients;
+using BreweryEmpire.Core.Model.Logistics;
+using BreweryEmpire.Core.Model.Packaging;
 using BreweryEmpire.Core.Model.Recipes;
 using BreweryEmpire.Core.Model.Sites;
 using BreweryEmpire.Core.Model.Staff;
@@ -119,33 +121,7 @@ namespace BreweryEmpire.Core.State
                 }
 
                 foreach (var b in n.Batches)
-                {
-                    nodeDto.Batches.Add(new BatchDto
-                    {
-                        Id = b.Id.Value,
-                        RecipeId = b.RecipeId.Value,
-                        NodeId = b.NodeId,
-                        VesselId = b.VesselId.Value,
-                        VolumeLitres = b.VolumeLitres,
-                        State = (int)b.State,
-                        BrewedOnTotalDays = b.BrewedOn.TotalDays,
-                        ReadyOnTotalDays = b.ReadyOn.TotalDays,
-                        QualityBasisPoints = b.QualityBasisPoints,
-                        CostOfGoodsCents = b.CostOfGoods.Cents,
-                        Flavor = b.Flavor,
-                        OriginalGravityPoints = b.OriginalGravityPoints,
-                        FinalGravityPoints = b.FinalGravityPoints,
-                        AttenuationBasisPoints = b.AttenuationBasisPoints,
-                        AbvBasisPoints = b.AbvBasisPoints,
-                        IbuTenths = b.IbuTenths,
-                        SrmLovibond = b.SrmLovibond,
-                        YeastIngredientId = b.YeastIngredientId,
-                        YeastGeneration = b.YeastGeneration,
-                        Style = (int)b.Style,
-                        IsPasteurized = b.IsPasteurized,
-                        Infections = new List<Infection>(b.Infections)
-                    });
-                }
+                    nodeDto.Batches.Add(ToBatchDto(b));
 
                 foreach (var lot in n.Inventory.Lots)
                 {
@@ -225,6 +201,24 @@ namespace BreweryEmpire.Core.State
                 dto.Markets.Add(marketDto);
             }
 
+            foreach (var sh in s.Shipments)
+            {
+                dto.Shipments.Add(new ShipmentDto
+                {
+                    Id = sh.Id.Value,
+                    BatchId = sh.BatchId.Value,
+                    From = sh.From.Value,
+                    To = sh.To.Value,
+                    Packaging = (int)sh.Packaging,
+                    VolumeLitres = sh.VolumeLitres,
+                    DaysRemaining = sh.DaysRemaining,
+                    TransportCostCents = sh.TransportCost.Cents,
+                    Mode = (int)sh.Mode,
+                    IsRefrigerated = sh.IsRefrigerated,
+                    Cargo = sh.Cargo != null ? ToBatchDto(sh.Cargo) : null
+                });
+            }
+
             return dto;
         }
 
@@ -295,42 +289,7 @@ namespace BreweryEmpire.Core.State
                 }
 
                 foreach (var b in n.Batches)
-                {
-                    var batch = new Batch(new BatchId(b.Id), new RecipeId(b.RecipeId), b.NodeId,
-                                          new VesselId(b.VesselId), Math.Max(1, b.VolumeLitres),
-                                          GameDate.FromTotalDays(b.BrewedOnTotalDays),
-                                          GameDate.FromTotalDays(b.ReadyOnTotalDays))
-                    {
-                        CostOfGoods = Money.FromCents(b.CostOfGoodsCents),
-                        Flavor = b.Flavor ?? new FlavorProfile(),
-                        OriginalGravityPoints = b.OriginalGravityPoints,
-                        FinalGravityPoints = b.FinalGravityPoints,
-                        AttenuationBasisPoints = b.AttenuationBasisPoints,
-                        AbvBasisPoints = b.AbvBasisPoints,
-                        IbuTenths = b.IbuTenths,
-                        SrmLovibond = b.SrmLovibond,
-                        YeastIngredientId = string.IsNullOrEmpty(b.YeastIngredientId) ? "ale-yeast" : b.YeastIngredientId,
-                        YeastGeneration = Math.Max(1, b.YeastGeneration),
-                        Style = (BeerStyle)b.Style,
-                        IsPasteurized = b.IsPasteurized
-                    };
-
-                    batch.SetQuality(b.QualityBasisPoints);
-
-                    // Restore exact volume, including zero.
-                    int delta = batch.VolumeLitres - b.VolumeLitres;
-                    if (delta > 0) batch.Remove(delta);
-
-                    foreach (var inf in b.Infections ?? new List<Infection>())
-                        batch.RestoreInfection(inf);
-
-                    batch.SetQuality(b.QualityBasisPoints);
-
-                    if ((BatchState)b.State == BatchState.Ready) batch.MarkReady();
-                    else if ((BatchState)b.State == BatchState.Spoiled) batch.MarkSpoiled();
-
-                    node.AddBatch(batch);
-                }
+                    node.AddBatch(FromBatchDto(b));
 
                 foreach (var l in n.Lots)
                 {
@@ -415,6 +374,20 @@ namespace BreweryEmpire.Core.State
                 state.Markets.Add(market);
             }
 
+            foreach (var sh in dto.Shipments)
+            {
+                state.Shipments.Add(new Shipment(
+                    new ShipmentId(sh.Id), new BatchId(sh.BatchId),
+                    new NodeId(sh.From), new NodeId(sh.To),
+                    sh.DaysRemaining, (PackagingType)sh.Packaging, sh.VolumeLitres)
+                {
+                    TransportCost = Money.FromCents(sh.TransportCostCents),
+                    Mode = (TransportMode)sh.Mode,
+                    IsRefrigerated = sh.IsRefrigerated,
+                    Cargo = sh.Cargo != null ? FromBatchDto(sh.Cargo) : null
+                });
+            }
+
             return state;
         }
 
@@ -443,6 +416,70 @@ namespace BreweryEmpire.Core.State
 
         // ---------- DTOs ----------
 
+        private static BatchDto ToBatchDto(Batch b) => new BatchDto
+        {
+            Id = b.Id.Value,
+            RecipeId = b.RecipeId.Value,
+            NodeId = b.NodeId,
+            VesselId = b.VesselId.Value,
+            VolumeLitres = b.VolumeLitres,
+            State = (int)b.State,
+            BrewedOnTotalDays = b.BrewedOn.TotalDays,
+            ReadyOnTotalDays = b.ReadyOn.TotalDays,
+            QualityBasisPoints = b.QualityBasisPoints,
+            CostOfGoodsCents = b.CostOfGoods.Cents,
+            Flavor = b.Flavor,
+            OriginalGravityPoints = b.OriginalGravityPoints,
+            FinalGravityPoints = b.FinalGravityPoints,
+            AttenuationBasisPoints = b.AttenuationBasisPoints,
+            AbvBasisPoints = b.AbvBasisPoints,
+            IbuTenths = b.IbuTenths,
+            SrmLovibond = b.SrmLovibond,
+            YeastIngredientId = b.YeastIngredientId,
+            YeastGeneration = b.YeastGeneration,
+            Style = (int)b.Style,
+            IsPasteurized = b.IsPasteurized,
+            Infections = new List<Infection>(b.Infections)
+        };
+
+        private static Batch FromBatchDto(BatchDto b)
+        {
+            var batch = new Batch(new BatchId(b.Id), new RecipeId(b.RecipeId), b.NodeId,
+                                  new VesselId(b.VesselId), Math.Max(1, b.VolumeLitres),
+                                  GameDate.FromTotalDays(b.BrewedOnTotalDays),
+                                  GameDate.FromTotalDays(b.ReadyOnTotalDays))
+            {
+                CostOfGoods = Money.FromCents(b.CostOfGoodsCents),
+                Flavor = b.Flavor ?? new FlavorProfile(),
+                OriginalGravityPoints = b.OriginalGravityPoints,
+                FinalGravityPoints = b.FinalGravityPoints,
+                AttenuationBasisPoints = b.AttenuationBasisPoints,
+                AbvBasisPoints = b.AbvBasisPoints,
+                IbuTenths = b.IbuTenths,
+                SrmLovibond = b.SrmLovibond,
+                YeastIngredientId = string.IsNullOrEmpty(b.YeastIngredientId) ? "ale-yeast" : b.YeastIngredientId,
+                YeastGeneration = Math.Max(1, b.YeastGeneration),
+                Style = (BeerStyle)b.Style,
+                IsPasteurized = b.IsPasteurized
+            };
+
+            batch.SetQuality(b.QualityBasisPoints);
+
+            // Restore exact volume, including zero.
+            int delta = batch.VolumeLitres - b.VolumeLitres;
+            if (delta > 0) batch.Remove(delta);
+
+            foreach (var inf in b.Infections ?? new List<Infection>())
+                batch.RestoreInfection(inf);
+
+            batch.SetQuality(b.QualityBasisPoints);
+
+            if ((BatchState)b.State == BatchState.Ready) batch.MarkReady();
+            else if ((BatchState)b.State == BatchState.Spoiled) batch.MarkSpoiled();
+
+            return batch;
+        }
+
         internal sealed class GameStateDto
         {
             public int SaveVersion { get; set; }
@@ -463,6 +500,7 @@ namespace BreweryEmpire.Core.State
             public int PrestigeBasisPoints { get; set; }
             public List<BreweryEmpire.Core.Model.Events.GameEvent>? PendingEvents { get; set; }
             public List<string>? ResolvedEventIds { get; set; }
+            public List<ShipmentDto> Shipments { get; set; } = new List<ShipmentDto>();
         }
 
         internal sealed class LedgerEntryDto
@@ -530,6 +568,21 @@ namespace BreweryEmpire.Core.State
             public int Style { get; set; }
             public bool IsPasteurized { get; set; }
             public List<Infection>? Infections { get; set; }
+        }
+
+        internal sealed class ShipmentDto
+        {
+            public string Id { get; set; } = string.Empty;
+            public string BatchId { get; set; } = string.Empty;
+            public string From { get; set; } = string.Empty;
+            public string To { get; set; } = string.Empty;
+            public int Packaging { get; set; }
+            public int VolumeLitres { get; set; }
+            public int DaysRemaining { get; set; }
+            public long TransportCostCents { get; set; }
+            public int Mode { get; set; }
+            public bool IsRefrigerated { get; set; }
+            public BatchDto? Cargo { get; set; }
         }
 
         internal sealed class LotDto
