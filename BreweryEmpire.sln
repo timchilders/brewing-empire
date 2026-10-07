@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{9E6FBACF
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BreweryEmpire.Core.Tests", "tests\BreweryEmpire.Core.Tests\BreweryEmpire.Core.Tests.csproj", "{98722BCD-17AD-42D9-BBC1-19C4A4613C53}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BreweryEmpire.Headless", "src\BreweryEmpire.Headless\BreweryEmpire.Headless.csproj", "{D6854530-A630-4562-B86F-298076098E7C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,9 +30,14 @@ Global
 		{98722BCD-17AD-42D9-BBC1-19C4A4613C53}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{98722BCD-17AD-42D9-BBC1-19C4A4613C53}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{98722BCD-17AD-42D9-BBC1-19C4A4613C53}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D6854530-A630-4562-B86F-298076098E7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6854530-A630-4562-B86F-298076098E7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6854530-A630-4562-B86F-298076098E7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6854530-A630-4562-B86F-298076098E7C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{FB169AB5-C157-476D-BFA4-9D30A77321FF} = {E6106874-5B1B-4239-B46E-EF6DF022CEEE}
 		{98722BCD-17AD-42D9-BBC1-19C4A4613C53} = {9E6FBACF-4396-4947-ABD6-F043364D2E9B}
+		{D6854530-A630-4562-B86F-298076098E7C} = {E6106874-5B1B-4239-B46E-EF6DF022CEEE}
 	EndGlobalSection
 EndGlobal
