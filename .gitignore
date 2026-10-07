@@ -44,3 +44,6 @@ desktop.ini
 
 # ---- Local tooling ----
 tmp/
+
+# ---- Published Unity DLLs (regenerate with tools/publish-unity.sh) ----
+unity/Assets/Plugins/BreweryEmpire.Core/*.dll
